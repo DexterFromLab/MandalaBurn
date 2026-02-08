@@ -93,13 +93,20 @@
                 const kids = p.children.slice();
                 for (let i = 0; i < kids.length; i++) {
                     let isHole = false;
-                    const pt = kids[i].interiorPoint || kids[i].bounds.center;
-                    for (let j = 0; j < kids.length; j++) {
-                        if (i !== j && kids[j].contains(pt)) {
-                            isHole = true;
-                            break;
+                    try {
+                        const pt = kids[i].interiorPoint || kids[i].bounds.center;
+                        if (pt) {
+                            const areaI = Math.abs(kids[i].area);
+                            for (let j = 0; j < kids.length; j++) {
+                                if (i !== j &&
+                                    Math.abs(kids[j].area) > areaI &&
+                                    kids[j].contains(pt)) {
+                                    isHole = true;
+                                    break;
+                                }
+                            }
                         }
-                    }
+                    } catch (e) { /* classification failed, treat as outer */ }
                     (isHole ? holes : outers).push(kids[i].clone());
                 }
                 p.remove();
