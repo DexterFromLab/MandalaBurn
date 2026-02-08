@@ -1027,6 +1027,23 @@ input[type="color"]::-webkit-color-swatch { border: 1px solid var(--border); bor
 .canvas-context-menu .shortcut { color: var(--text-muted); margin-left: 16px; font-size: 11px; }
 .canvas-context-menu button:hover .shortcut { color: rgba(255,255,255,0.7); }
 
+/* ===================== Simulator ===================== */
+.sim-transport { display: flex; gap: 4px; margin-bottom: 6px; }
+.sim-transport button { flex: 1; font-size: 12px; padding: 4px 2px; }
+.sim-progress-bar {
+    height: 6px; background: var(--bg-primary); border-radius: 3px;
+    margin: 6px 0; cursor: pointer; border: 1px solid var(--border);
+}
+.sim-progress-fill {
+    height: 100%; background: var(--accent); border-radius: 2px;
+    width: 0%; transition: none;
+}
+.sim-time { font-size: 11px; color: var(--text-secondary); text-align: center; margin-bottom: 2px; }
+.sim-params { margin-top: 4px; border-top: 1px solid var(--border); padding-top: 4px; }
+.sim-param { display: flex; justify-content: space-between; font-size: 11px; padding: 1px 0; }
+.sim-param span:first-child { color: var(--text-secondary); }
+.sim-param span:last-child { color: var(--text-primary); font-family: monospace; }
+
 /* ===================== Laser position marker on canvas ===================== */
 .laser-crosshair {
     pointer-events: none;

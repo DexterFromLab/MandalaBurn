@@ -509,6 +509,42 @@
                 </div>
             </div>
 
+            <!-- Simulator -->
+            <div class="panel-section collapsed" id="simulator-panel">
+                <div class="panel-header collapsible">Simulator<span class="collapse-arrow"></span></div>
+                <div class="panel-body">
+                    <div class="sim-transport">
+                        <button class="to-btn" id="sim-play" title="Play">&#9654; Play</button>
+                        <button class="to-btn" id="sim-pause" title="Pause" disabled>&#9208;</button>
+                        <button class="to-btn" id="sim-stop" title="Stop" disabled>&#9632;</button>
+                    </div>
+                    <div class="prop-row">
+                        <label>Speed</label>
+                        <div class="btn-group" id="sim-speed-group">
+                            <button class="bg-btn active" data-speed="1">1x</button>
+                            <button class="bg-btn" data-speed="2">2x</button>
+                            <button class="bg-btn" data-speed="4">4x</button>
+                            <button class="bg-btn" data-speed="8">8x</button>
+                            <button class="bg-btn" data-speed="16">16x</button>
+                            <button class="bg-btn" data-speed="32">32x</button>
+                            <button class="bg-btn" data-speed="64">64x</button>
+                        </div>
+                    </div>
+                    <div class="sim-progress-bar" id="sim-progress">
+                        <div class="sim-progress-fill" id="sim-progress-fill"></div>
+                    </div>
+                    <div class="sim-time" id="sim-time">00:00 / 00:00</div>
+                    <div class="sim-params">
+                        <div class="sim-param"><span>Layer</span><span id="sim-layer">&mdash;</span></div>
+                        <div class="sim-param"><span>Pass</span><span id="sim-pass">&mdash;</span></div>
+                        <div class="sim-param"><span>Speed</span><span id="sim-speed">&mdash;</span></div>
+                        <div class="sim-param"><span>Power</span><span id="sim-power">&mdash;</span></div>
+                        <div class="sim-param"><span>Air</span><span id="sim-air">&mdash;</span></div>
+                        <div class="sim-param"><span>Mode</span><span id="sim-mode">&mdash;</span></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Laser Control (Jog) -->
             <div class="panel-section collapsed" id="jog-panel">
                 <div class="panel-header collapsible">Laser Control<span class="collapse-arrow"></span></div>
@@ -773,5 +809,6 @@
     <script src="/js/project-io.js"></script>
     <script src="/js/font-manager.js"></script>
     <script src="/js/tools/text.js"></script>
+    <script src="/js/simulator.js"></script>
 </body>
 </html>

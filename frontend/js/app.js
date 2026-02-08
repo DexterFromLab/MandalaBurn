@@ -30,6 +30,7 @@ MB.App = {
         MB.Machine.init();
         MB.ProjectIO.init();
         MB.FontManager.init();
+        MB.Simulator.init();
 
         this.initMenus();
         this.initToolOptions();
