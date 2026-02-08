@@ -74,26 +74,68 @@
     }
 
     /**
-     * Unite glyph paths and fix winding directions for holes (A, B, D, etc.)
+     * Unite glyph paths with clean hole handling.
+     * Decomposes each glyph CompoundPath into outer contours and holes,
+     * unites only the outers (simpler boolean → fewer artifacts),
+     * then subtracts holes back to recreate clean cutouts.
      */
     function unitePaths(paths) {
         if (paths.length <= 1) return paths[0] || null;
 
-        let result = paths[0];
-        for (let i = 1; i < paths.length; i++) {
-            try {
-                const merged = result.unite(paths[i]);
-                result.remove();
-                paths[i].remove();
-                result = merged;
-            } catch (e) {
-                paths[i].remove();
+        // Decompose CompoundPaths into outer contours and holes.
+        // A sub-path is a "hole" if it's contained inside another sub-path
+        // of the same glyph (e.g. the triangle inside letter A).
+        const outers = [];
+        const holes = [];
+
+        for (const p of paths) {
+            if (p instanceof paper.CompoundPath && p.children.length > 1) {
+                const kids = p.children.slice();
+                for (let i = 0; i < kids.length; i++) {
+                    let isHole = false;
+                    const pt = kids[i].interiorPoint || kids[i].bounds.center;
+                    for (let j = 0; j < kids.length; j++) {
+                        if (i !== j && kids[j].contains(pt)) {
+                            isHole = true;
+                            break;
+                        }
+                    }
+                    (isHole ? holes : outers).push(kids[i].clone());
+                }
+                p.remove();
+            } else if (p instanceof paper.CompoundPath && p.children.length === 1) {
+                outers.push(p.children[0].clone());
+                p.remove();
+            } else {
+                outers.push(p);
             }
         }
 
-        // Fix winding directions so counters (holes) render correctly
-        if (result instanceof paper.CompoundPath && result.reorient) {
-            result.reorient(true, true);
+        if (outers.length === 0) return null;
+
+        // Unite outer contours (simple paths, no holes → cleaner boolean)
+        let result = outers[0];
+        for (let i = 1; i < outers.length; i++) {
+            try {
+                const u = result.unite(outers[i]);
+                result.remove();
+                outers[i].remove();
+                result = u;
+            } catch (e) {
+                outers[i].remove();
+            }
+        }
+
+        // Subtract holes to recreate clean cutouts
+        for (const hole of holes) {
+            try {
+                const s = result.subtract(hole);
+                result.remove();
+                hole.remove();
+                result = s;
+            } catch (e) {
+                hole.remove();
+            }
         }
 
         return result;
