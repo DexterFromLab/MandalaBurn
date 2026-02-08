@@ -8,7 +8,7 @@ MB.App = {
     clipboard: null,
 
     // Tools that have an options panel
-    _toolsWithOptions: ['select', 'pen', 'ruler', 'polygon'],
+    _toolsWithOptions: ['select', 'pen', 'ruler', 'polygon', 'node-edit'],
 
     // Default layer colors (LightBurn style)
     layerColors: [
@@ -260,6 +260,9 @@ MB.App = {
             case 'machine-set-origin': MB.Machine.sendCommand('G92 X0 Y0'); break;
             case 'machine-goto-origin': MB.Machine.sendGoto(0, 0); break;
             case 'machine-frame': MB.Machine.frameJob && MB.Machine.frameJob(); break;
+            case 'path-reverse': MB._nodeEditOps && MB._nodeEditOps.reverse(); break;
+            case 'path-simplify': MB._nodeEditOps && MB._nodeEditOps.simplify(); break;
+            case 'path-flatten': MB._nodeEditOps && MB._nodeEditOps.flatten(); break;
         }
     },
 
@@ -292,12 +295,12 @@ MB.App = {
             else if (!ctrl && (e.key === 'l' || e.key === 'L')) { this.setTool('line'); }
             else if (!ctrl && (e.key === 'p' || e.key === 'P')) { this.setTool('pen'); }
             else if (!ctrl && (e.key === 'r' || e.key === 'R')) { this.setTool('rect'); }
-            else if (!ctrl && (e.key === 'c' || e.key === 'C')) { this.setTool('circle'); }
+            else if (!ctrl && (e.key === 'c' || e.key === 'C') && this.activeTool !== 'node-edit') { this.setTool('circle'); }
             else if (!ctrl && (e.key === 'q' || e.key === 'Q')) { this.setTool('polygon'); }
             else if (!ctrl && (e.key === 'n' || e.key === 'N')) { this.setTool('node-edit'); }
             else if (!ctrl && (e.key === 'm' || e.key === 'M')) { this.setTool('ruler'); }
             else if (!ctrl && (e.key === 'g' || e.key === 'G')) { MB.GridSnap.toggleGrid(); }
-            else if (!ctrl && (e.key === 's' || e.key === 'S')) { MB.GridSnap.toggleSnap(); }
+            else if (!ctrl && (e.key === 's' || e.key === 'S') && this.activeTool !== 'node-edit') { MB.GridSnap.toggleSnap(); }
             // Transform mode shortcuts (1/2/3) when select tool is active
             else if (!ctrl && this.activeTool === 'select' && e.key === '1') {
                 document.querySelector('.to-btn[data-mode="move"]')?.click();

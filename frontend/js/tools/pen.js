@@ -2,8 +2,8 @@
 (function() {
     let path = null;
     let currentSegment = null;
-    let handleOut = null;
     let previewLine = null;
+    let closeIndicator = null;
 
     const tool = new paper.Tool();
     tool.name = 'pen';
@@ -11,6 +11,17 @@
     function isSmooth() {
         const cb = document.getElementById('pen-smooth');
         return cb && cb.checked;
+    }
+
+    function constrainAngle(from, to) {
+        const delta = to.subtract(from);
+        const angle = Math.atan2(delta.y, delta.x);
+        const snapAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+        const dist = delta.length;
+        return from.add(new paper.Point(
+            Math.cos(snapAngle) * dist,
+            Math.sin(snapAngle) * dist
+        ));
     }
 
     function updatePenInfo() {
@@ -26,11 +37,35 @@
         }
     }
 
+    function clearCloseIndicator() {
+        if (closeIndicator) { closeIndicator.remove(); closeIndicator = null; }
+    }
+
+    function drawCloseIndicator(firstPt) {
+        clearCloseIndicator();
+        const z = paper.view.zoom;
+        closeIndicator = new paper.Path.Circle({
+            center: firstPt,
+            radius: 6 / z,
+            strokeColor: '#6cef8c',
+            strokeWidth: 1.5 / z,
+            fillColor: new paper.Color(0.42, 0.94, 0.55, 0.15)
+        });
+    }
+
+    function isNearFirstPoint(point) {
+        if (!path || path.segments.length < 2) return false;
+        return point.getDistance(path.firstSegment.point) < 8 / paper.view.zoom;
+    }
+
     tool.onMouseDown = function(event) {
         const layer = MB.Layers.getActiveLayer();
         if (!layer || layer.locked) return;
 
-        const point = MB.GridSnap.snap(event.point, event);
+        let point = MB.GridSnap.snap(event.point, event);
+        if (event.modifiers.shift && path && path.segments.length > 0) {
+            point = constrainAngle(path.lastSegment.point, point);
+        }
 
         if (!path) {
             MB.History.snapshot();
@@ -69,28 +104,68 @@
 
     tool.onMouseDrag = function(event) {
         if (!currentSegment) return;
-        const point = MB.GridSnap.snap(event.point, event);
+        let point = MB.GridSnap.snap(event.point, event);
+        if (event.modifiers.shift) {
+            point = constrainAngle(currentSegment.point, point);
+        }
         const delta = point.subtract(currentSegment.point);
-        currentSegment.handleOut = delta;
-        currentSegment.handleIn = delta.negate();
+
+        if (event.modifiers.alt) {
+            // Alt = break symmetry, only set handleOut (cusp)
+            currentSegment.handleOut = delta;
+            if (!currentSegment.data) currentSegment.data = {};
+            currentSegment.data.nodeType = 'cusp';
+        } else {
+            currentSegment.handleOut = delta;
+            currentSegment.handleIn = delta.negate();
+        }
         updatePenInfo();
     };
 
     tool.onMouseMove = function(event) {
         if (!path || path.segments.length === 0) return;
+
+        // Remove old preview
         if (previewLine) previewLine.remove();
-        const lastPt = path.lastSegment.point;
-        previewLine = new paper.Path.Line({
-            from: lastPt,
-            to: event.point,
-            strokeColor: MB.Layers.getActiveColor(),
-            strokeWidth: 0.5 / paper.view.zoom,
-            dashArray: [4 / paper.view.zoom, 4 / paper.view.zoom]
-        });
+        clearCloseIndicator();
+
+        const lastSeg = path.lastSegment;
+        let target = event.point;
+        if (event.modifiers.shift) {
+            target = constrainAngle(lastSeg.point, target);
+        }
+
+        // Close indicator when near first point
+        if (isNearFirstPoint(target) && path.segments.length > 1) {
+            drawCloseIndicator(path.firstSegment.point);
+            target = path.firstSegment.point;
+        }
+
+        // Draw bezier preview if last segment has handleOut, otherwise straight line
+        if (lastSeg.handleOut && lastSeg.handleOut.length > 0.1) {
+            previewLine = new paper.Path({
+                segments: [
+                    new paper.Segment(lastSeg.point, null, lastSeg.handleOut),
+                    new paper.Segment(target)
+                ],
+                strokeColor: MB.Layers.getActiveColor(),
+                strokeWidth: 0.5 / paper.view.zoom,
+                dashArray: [4 / paper.view.zoom, 4 / paper.view.zoom]
+            });
+        } else {
+            previewLine = new paper.Path.Line({
+                from: lastSeg.point,
+                to: target,
+                strokeColor: MB.Layers.getActiveColor(),
+                strokeWidth: 0.5 / paper.view.zoom,
+                dashArray: [4 / paper.view.zoom, 4 / paper.view.zoom]
+            });
+        }
     };
 
     function finishPath() {
         if (previewLine) { previewLine.remove(); previewLine = null; }
+        clearCloseIndicator();
 
         if (!path || path.segments.length < 2) {
             if (path) path.remove();
@@ -125,6 +200,7 @@
         },
         cancel() {
             if (previewLine) { previewLine.remove(); previewLine = null; }
+            clearCloseIndicator();
             if (path) {
                 if (path.segments.length >= 2) {
                     finishPath();

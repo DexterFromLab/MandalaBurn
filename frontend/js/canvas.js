@@ -11,6 +11,9 @@ MB.Canvas = {
         const canvas = document.getElementById('main-canvas');
         paper.setup(canvas);
 
+        // Fit canvas buffer to container (replaces Paper.js 'resize' attribute)
+        this._fitCanvasToContainer();
+
         // Create workspace layer (background, always at bottom)
         this.bgLayer = new paper.Layer({ name: 'background' });
         this.bgLayer.activate();
@@ -68,8 +71,19 @@ MB.Canvas = {
             this.drawWorkspace();
         });
 
-        // Handle resize
-        window.addEventListener('resize', () => paper.view.update());
+        // Handle resize — update canvas buffer to match container
+        const ro = new ResizeObserver(() => this._fitCanvasToContainer());
+        ro.observe(container);
+    },
+
+    _fitCanvasToContainer() {
+        const container = document.getElementById('canvas-container');
+        if (!container) return;
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        if (w > 0 && h > 0) {
+            paper.view.viewSize = new paper.Size(w, h);
+        }
     },
 
     drawWorkspace() {
@@ -98,8 +112,10 @@ MB.Canvas = {
         e.preventDefault();
         const delta = e.deltaY;
         const factor = delta > 0 ? 0.9 : 1.1;
+        const canvas = document.getElementById('main-canvas');
+        const rect = canvas.getBoundingClientRect();
         const mousePos = paper.view.viewToProject(new paper.Point(
-            e.offsetX, e.offsetY
+            e.clientX - rect.left, e.clientY - rect.top
         ));
         this.zoomAt(mousePos, factor);
     },

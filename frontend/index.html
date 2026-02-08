@@ -48,13 +48,17 @@
             <button data-action="move-to-layer">Move Selection to Layer...</button>
             <button data-action="merge-layers">Merge Layer Down</button>
         </div>
-        <!-- Tools menu (boolean ops) -->
+        <!-- Tools menu (boolean ops + path ops) -->
         <div class="menu-items" data-menu="tools">
             <button data-action="bool-unite">Unite (Union)</button>
             <button data-action="bool-subtract">Subtract (Difference)</button>
             <button data-action="bool-intersect">Intersect</button>
             <button data-action="bool-exclude">Exclude (XOR)</button>
             <button data-action="bool-divide">Divide</button>
+            <div class="menu-separator"></div>
+            <button data-action="path-reverse">Reverse Path</button>
+            <button data-action="path-simplify">Simplify Path</button>
+            <button data-action="path-flatten">Flatten Path</button>
         </div>
         <!-- Machine menu -->
         <div class="menu-items" data-menu="machine">
@@ -181,6 +185,39 @@
                     <button class="to-btn" id="ruler-clear">Clear</button>
                 </div>
             </div>
+            <!-- Node-edit tool options -->
+            <div class="tool-opts" data-tool="node-edit">
+                <div class="tool-opts-title">Node Edit</div>
+                <div class="to-btn-group">
+                    <button class="to-btn" id="ne-corner" title="Corner (C)" disabled>Corner</button>
+                    <button class="to-btn" id="ne-smooth" title="Smooth (S)" disabled>Smooth</button>
+                    <button class="to-btn" id="ne-cusp" title="Cusp (B)" disabled>Cusp</button>
+                </div>
+                <div class="to-btn-group" style="margin-top:4px">
+                    <button class="to-btn" id="ne-add" title="Add node (click on path)" disabled>+ Add</button>
+                    <button class="to-btn" id="ne-del" title="Delete selected nodes" disabled>- Del</button>
+                </div>
+                <div class="to-btn-group" style="margin-top:4px">
+                    <button class="to-btn" id="ne-close" title="Close open path" disabled>Close</button>
+                    <button class="to-btn" id="ne-open" title="Open closed path" disabled>Open</button>
+                    <button class="to-btn" id="ne-break" title="Break path into 2" disabled>Break</button>
+                </div>
+                <div class="to-btn-group" style="margin-top:4px">
+                    <button class="to-btn" id="ne-reverse" title="Reverse direction" disabled>Reverse</button>
+                </div>
+                <div class="to-btn-group" style="margin-top:4px">
+                    <button class="to-btn" id="ne-simplify" title="Simplify path" disabled>Simplify</button>
+                    <button class="to-btn" id="ne-flatten" title="Flatten curves" disabled>Flatten</button>
+                </div>
+                <div class="prop-row" style="margin-top:4px">
+                    <label>Tol</label>
+                    <input type="number" id="ne-tolerance" value="2.5" min="0.1" max="50" step="0.5" style="width:55px">
+                </div>
+                <div class="prop-row" id="ne-info" style="font-size:10px;color:var(--text-muted)">
+                    <span id="ne-seg-count">Nodes: 0</span>
+                    <span id="ne-path-len">Len: 0</span>
+                </div>
+            </div>
             <!-- Polygon tool options -->
             <div class="tool-opts" data-tool="polygon">
                 <div class="tool-opts-title">Polygon</div>
@@ -204,7 +241,7 @@
             <canvas id="ruler-h" height="20"></canvas>
             <canvas id="ruler-v" width="20"></canvas>
             <div id="canvas-container">
-                <canvas id="main-canvas" resize></canvas>
+                <canvas id="main-canvas"></canvas>
             </div>
         </div>
 

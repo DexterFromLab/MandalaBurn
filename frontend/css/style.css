@@ -189,6 +189,7 @@ body {
     min-width: 0;
 }
 .to-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+.to-btn:disabled { opacity: 0.35; pointer-events: none; }
 .to-btn.active { background: var(--accent); color: white; border-color: var(--accent-hover); }
 .measure-val {
     font-family: 'Consolas', 'SF Mono', monospace;
