@@ -35,17 +35,32 @@
             <div class="menu-separator"></div>
             <button data-action="import-svg">Import SVG...</button>
             <button data-action="export-svg">Export SVG</button>
+            <button data-action="export-gcode">Export G-code</button>
         </div>
         <!-- Edit menu -->
         <div class="menu-items" data-menu="edit">
             <button data-action="undo">Undo <span class="shortcut">Ctrl+Z</span></button>
             <button data-action="redo">Redo <span class="shortcut">Ctrl+Shift+Z</span></button>
             <div class="menu-separator"></div>
+            <button data-action="copy">Copy <span class="shortcut">Ctrl+C</span></button>
+            <button data-action="cut">Cut <span class="shortcut">Ctrl+X</span></button>
+            <button data-action="paste">Paste <span class="shortcut">Ctrl+V</span></button>
+            <button data-action="duplicate">Duplicate <span class="shortcut">Ctrl+D</span></button>
+            <div class="menu-separator"></div>
             <button data-action="select-all">Select All <span class="shortcut">Ctrl+A</span></button>
             <button data-action="delete-selected">Delete <span class="shortcut">Del</span></button>
             <div class="menu-separator"></div>
             <button data-action="group-selected">Group <span class="shortcut">Ctrl+G</span></button>
             <button data-action="ungroup-selected">Ungroup <span class="shortcut">Ctrl+Shift+G</span></button>
+            <div class="menu-separator"></div>
+            <button data-action="align-left">Align Left</button>
+            <button data-action="align-right">Align Right</button>
+            <button data-action="align-top">Align Top</button>
+            <button data-action="align-bottom">Align Bottom</button>
+            <button data-action="align-center-h">Center Horizontal</button>
+            <button data-action="align-center-v">Center Vertical</button>
+            <button data-action="distribute-h">Distribute Horizontal</button>
+            <button data-action="distribute-v">Distribute Vertical</button>
             <div class="menu-separator"></div>
             <button data-action="split-to-layer">Split Selection to New Layer</button>
             <button data-action="move-to-layer">Move Selection to Layer...</button>
@@ -62,6 +77,9 @@
             <button data-action="path-reverse">Reverse Path</button>
             <button data-action="path-simplify">Simplify Path</button>
             <button data-action="path-flatten">Flatten Path</button>
+            <div class="menu-separator"></div>
+            <button data-action="path-offset">Path Offset / Inset...</button>
+            <button data-action="array-pattern">Array / Pattern...</button>
         </div>
         <!-- Machine menu -->
         <div class="menu-items" data-menu="machine">
@@ -555,6 +573,11 @@
                         <input type="number" id="snap-step" value="10" step="0.01" min="0.01" max="1000">
                         <span class="unit-label">custom</span>
                     </div>
+                    <!-- Object Snap -->
+                    <div class="prop-row">
+                        <label>Obj Snap</label>
+                        <button class="snap-toggle-btn off" id="obj-snap-toggle">OFF</button>
+                    </div>
                     <!-- Major grid multiplier -->
                     <div class="prop-row">
                         <label>Major</label>
@@ -601,6 +624,22 @@
                         <div class="sim-param"><span>Air</span><span id="sim-air">&mdash;</span></div>
                         <div class="sim-param"><span>Mode</span><span id="sim-mode">&mdash;</span></div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Job Control -->
+            <div class="panel-section collapsed" id="job-panel">
+                <div class="panel-header collapsible">Job Control<span class="collapse-arrow"></span></div>
+                <div class="panel-body">
+                    <div class="sim-transport">
+                        <button class="to-btn" id="job-start">Start</button>
+                        <button class="to-btn" id="job-pause" disabled>Pause</button>
+                        <button class="to-btn" id="job-stop" disabled>Stop</button>
+                    </div>
+                    <div class="sim-progress-bar" id="job-progress">
+                        <div class="sim-progress-fill" id="job-progress-fill"></div>
+                    </div>
+                    <div class="sim-time" id="job-progress-text">0 / 0 lines (0%)</div>
                 </div>
             </div>
 
@@ -726,6 +765,71 @@
         </div>
     </div>
 
+    <!-- Array/Pattern Dialog -->
+    <div id="array-dialog" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div class="modal-title">Array / Pattern</div>
+            <div class="to-btn-group" style="margin-bottom:8px">
+                <button class="array-tab-btn to-btn active" data-tab="rect">Rectangular</button>
+                <button class="array-tab-btn to-btn" data-tab="circ">Circular</button>
+            </div>
+            <div id="array-rect-opts">
+                <div class="prop-row">
+                    <label>Rows</label>
+                    <input type="number" id="array-rows" value="3" min="1" max="50" step="1" style="width:55px">
+                </div>
+                <div class="prop-row">
+                    <label>Cols</label>
+                    <input type="number" id="array-cols" value="3" min="1" max="50" step="1" style="width:55px">
+                </div>
+                <div class="prop-row">
+                    <label>Gap X</label>
+                    <input type="number" id="array-gap-x" value="5" step="0.5" style="width:55px">
+                    <span class="unit-label">mm</span>
+                </div>
+                <div class="prop-row">
+                    <label>Gap Y</label>
+                    <input type="number" id="array-gap-y" value="5" step="0.5" style="width:55px">
+                    <span class="unit-label">mm</span>
+                </div>
+            </div>
+            <div id="array-circ-opts" class="hidden">
+                <div class="prop-row">
+                    <label>Count</label>
+                    <input type="number" id="array-circ-count" value="6" min="2" max="100" step="1" style="width:55px">
+                </div>
+                <div class="prop-row">
+                    <label>Radius</label>
+                    <input type="number" id="array-circ-radius" value="50" min="1" step="1" style="width:55px">
+                    <span class="unit-label">mm</span>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button id="array-cancel">Cancel</button>
+                <button id="array-apply" class="primary">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Path Offset Dialog -->
+    <div id="offset-dialog" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div class="modal-title">Path Offset / Inset</div>
+            <div class="prop-row">
+                <label>Distance</label>
+                <input type="number" id="offset-distance" value="2" step="0.5" style="width:60px">
+                <span class="unit-label">mm</span>
+            </div>
+            <div class="prop-row" style="font-size:10px;color:var(--text-muted)">
+                Positive = outward (offset), Negative = inward (inset)
+            </div>
+            <div class="modal-buttons">
+                <button id="offset-cancel">Cancel</button>
+                <button id="offset-apply" class="primary">Apply</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Status Bar -->
     <div id="status-bar">
         <span id="status-coords">X: 0.0 Y: 0.0</span>
@@ -736,6 +840,11 @@
 
     <!-- Canvas Context Menu -->
     <div id="canvas-context-menu" class="canvas-context-menu hidden">
+        <button data-action="ctx-copy">Copy<span class="shortcut">Ctrl+C</span></button>
+        <button data-action="ctx-cut">Cut<span class="shortcut">Ctrl+X</span></button>
+        <button data-action="ctx-paste">Paste<span class="shortcut">Ctrl+V</span></button>
+        <button data-action="ctx-duplicate">Duplicate<span class="shortcut">Ctrl+D</span></button>
+        <div class="menu-separator"></div>
         <button data-action="group">Group<span class="shortcut">Ctrl+G</span></button>
         <button data-action="ungroup">Ungroup<span class="shortcut">Ctrl+Shift+G</span></button>
         <div class="menu-separator"></div>
@@ -870,5 +979,10 @@
     <script src="/js/tools/text.js"></script>
     <script src="/js/simulator.js"></script>
     <script src="/js/mandala.js"></script>
+    <script src="/js/align.js"></script>
+    <script src="/js/gcode.js"></script>
+    <script src="/js/job-sender.js"></script>
+    <script src="/js/array-pattern.js"></script>
+    <script src="/js/path-offset.js"></script>
 </body>
 </html>

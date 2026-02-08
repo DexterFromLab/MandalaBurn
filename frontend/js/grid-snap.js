@@ -6,6 +6,8 @@ MB.GridSnap = {
     _ctrlHeld: false,       // Ctrl = 10x finer snap
     displayMode: 'dots',    // 'lines' | 'dots' | 'none'
     majorMultiplier: 5,     // major line every N grid lines (0 = off)
+    objectSnapEnabled: false,
+    _snapIndicator: null,
     gridGroup: null,
 
     // Colors
@@ -61,6 +63,16 @@ MB.GridSnap = {
             toggleBtn.textContent = this.snapEnabled ? 'ON' : 'OFF';
             toggleBtn.classList.toggle('off', !this.snapEnabled);
         });
+
+        // Object snap toggle
+        const objSnapBtn = document.getElementById('obj-snap-toggle');
+        if (objSnapBtn) {
+            objSnapBtn.addEventListener('click', () => {
+                this.objectSnapEnabled = !this.objectSnapEnabled;
+                objSnapBtn.textContent = this.objectSnapEnabled ? 'ON' : 'OFF';
+                objSnapBtn.classList.toggle('off', !this.objectSnapEnabled);
+            });
+        }
 
         // Snap step presets
         const group = document.getElementById('snap-step-presets');
@@ -267,6 +279,17 @@ MB.GridSnap = {
     },
 
     snap(point, event) {
+        this.clearSnapIndicator();
+
+        // Object snap (higher priority)
+        if (this.objectSnapEnabled) {
+            const objSnap = this.snapToObjects(point);
+            if (objSnap) {
+                this.showSnapIndicator(objSnap);
+                return objSnap;
+            }
+        }
+
         if (!this.snapEnabled) return point;
         const ctrl = this._getCtrl(event);
         const s = ctrl ? this.snapStep / 10 : this.snapStep;
@@ -274,6 +297,98 @@ MB.GridSnap = {
             Math.round(point.x / s) * s,
             Math.round(point.y / s) * s
         );
+    },
+
+    snapToObjects(point) {
+        const threshold = 8 / paper.view.zoom; // 8 screen pixels
+        let best = null;
+        let bestDist = threshold;
+
+        const selectedSet = new Set(MB.App.selectedItems);
+
+        MB.Layers.layers.forEach(layer => {
+            if (!layer.visible) return;
+            layer.paperLayer.children.forEach(item => {
+                if (!item.data || !item.data.isUserItem) return;
+                if (selectedSet.has(item)) return; // skip items being dragged
+
+                // Check bounds snap points
+                const b = item.bounds;
+                const pts = [
+                    b.center,
+                    b.topLeft, b.topRight, b.bottomLeft, b.bottomRight,
+                    new paper.Point(b.center.x, b.top),    // top-mid
+                    new paper.Point(b.center.x, b.bottom),  // bottom-mid
+                    new paper.Point(b.left, b.center.y),    // left-mid
+                    new paper.Point(b.right, b.center.y)    // right-mid
+                ];
+
+                // Path segment points
+                if (item instanceof paper.Path && item.segments) {
+                    item.segments.forEach(seg => pts.push(seg.point));
+                }
+                if (item instanceof paper.CompoundPath && item.children) {
+                    item.children.forEach(child => {
+                        if (child.segments) {
+                            child.segments.forEach(seg => pts.push(seg.point));
+                        }
+                    });
+                }
+
+                for (const pt of pts) {
+                    const d = point.getDistance(pt);
+                    if (d < bestDist) {
+                        bestDist = d;
+                        best = pt.clone();
+                    }
+                }
+            });
+        });
+
+        return best;
+    },
+
+    showSnapIndicator(point) {
+        this.clearSnapIndicator();
+        const zoom = paper.view.zoom;
+        const s = 6 / zoom;
+        const w = 1.5 / zoom;
+
+        const prevActive = paper.project.activeLayer;
+        MB.Canvas.bgLayer.activate();
+
+        this._snapIndicator = new paper.Group({
+            children: [
+                new paper.Path.Line({
+                    from: [point.x - s, point.y],
+                    to: [point.x + s, point.y],
+                    strokeColor: '#ff8800',
+                    strokeWidth: w
+                }),
+                new paper.Path.Line({
+                    from: [point.x, point.y - s],
+                    to: [point.x, point.y + s],
+                    strokeColor: '#ff8800',
+                    strokeWidth: w
+                }),
+                new paper.Path.Circle({
+                    center: point,
+                    radius: s * 0.6,
+                    strokeColor: '#ff8800',
+                    strokeWidth: w * 0.7,
+                    fillColor: null
+                })
+            ]
+        });
+
+        prevActive.activate();
+    },
+
+    clearSnapIndicator() {
+        if (this._snapIndicator) {
+            this._snapIndicator.remove();
+            this._snapIndicator = null;
+        }
     },
 
     toggleGrid() {

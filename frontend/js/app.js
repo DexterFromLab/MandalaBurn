@@ -6,7 +6,8 @@ MB.App = {
     _transformMode: 'move',
     tools: {},
     selectedItems: [],
-    clipboard: null,
+    clipboard: [],
+    _pasteOffset: 0,
 
     // Tools that have an options panel
     _toolsWithOptions: ['select', 'pen', 'ruler', 'polygon', 'node-edit', 'text', 'mandala'],
@@ -32,6 +33,9 @@ MB.App = {
         MB.FontManager.init();
         MB.Mandala.init();
         MB.Simulator.init();
+        MB.ArrayPattern.init();
+        MB.PathOffset.init();
+        MB.JobSender.init();
 
         this.initMenus();
         this.initToolOptions();
@@ -208,6 +212,61 @@ MB.App = {
         this.clearSelection();
     },
 
+    // --- Copy / Cut / Paste / Duplicate ---
+    copySelected() {
+        if (this.selectedItems.length === 0) return;
+        this.clipboard = this.selectedItems.map(item => item.exportJSON());
+        this._pasteOffset = 10;
+        document.getElementById('status-info').textContent =
+            'Copied ' + this.clipboard.length + ' item(s)';
+    },
+
+    cutSelected() {
+        if (this.selectedItems.length === 0) return;
+        this.copySelected();
+        MB.History.snapshot();
+        this.selectedItems.forEach(item => item.remove());
+        this.clearSelection();
+        document.getElementById('status-info').textContent =
+            'Cut ' + this.clipboard.length + ' item(s)';
+    },
+
+    pasteClipboard() {
+        if (!this.clipboard || this.clipboard.length === 0) return;
+        MB.History.snapshot();
+        const layer = MB.Layers.getActiveLayer();
+        if (layer) layer.paperLayer.activate();
+        const newItems = [];
+        for (const json of this.clipboard) {
+            const item = paper.project.activeLayer.importJSON(json);
+            item.data = item.data || {};
+            item.data.isUserItem = true;
+            item.translate(new paper.Point(this._pasteOffset, this._pasteOffset));
+            newItems.push(item);
+        }
+        this._pasteOffset += 10;
+        this.select(newItems);
+        document.getElementById('status-info').textContent =
+            'Pasted ' + newItems.length + ' item(s)';
+    },
+
+    duplicateSelected() {
+        if (this.selectedItems.length === 0) return;
+        MB.History.snapshot();
+        const newItems = [];
+        for (const item of this.selectedItems) {
+            const clone = item.clone();
+            clone.data = clone.data || {};
+            clone.data.isUserItem = true;
+            clone.translate(new paper.Point(10, 10));
+            clone.selected = false;
+            newItems.push(clone);
+        }
+        this.select(newItems);
+        document.getElementById('status-info').textContent =
+            'Duplicated ' + newItems.length + ' item(s)';
+    },
+
     // --- Collapsible Panels ---
     initCollapsiblePanels() {
         document.querySelectorAll('.panel-header.collapsible').forEach(header => {
@@ -277,6 +336,10 @@ MB.App = {
         switch (action) {
             case 'undo': MB.History.undo(); break;
             case 'redo': MB.History.redo(); break;
+            case 'copy': this.copySelected(); break;
+            case 'cut': this.cutSelected(); break;
+            case 'paste': this.pasteClipboard(); break;
+            case 'duplicate': this.duplicateSelected(); break;
             case 'select-all': this.selectAll(); break;
             case 'delete-selected': this.deleteSelected(); break;
             case 'group-selected': this.groupSelected(); break;
@@ -308,6 +371,17 @@ MB.App = {
             case 'path-reverse': MB._nodeEditOps && MB._nodeEditOps.reverse(); break;
             case 'path-simplify': MB._nodeEditOps && MB._nodeEditOps.simplify(); break;
             case 'path-flatten': MB._nodeEditOps && MB._nodeEditOps.flatten(); break;
+            case 'align-left': MB.Align.alignLeft(); break;
+            case 'align-right': MB.Align.alignRight(); break;
+            case 'align-top': MB.Align.alignTop(); break;
+            case 'align-bottom': MB.Align.alignBottom(); break;
+            case 'align-center-h': MB.Align.centerH(); break;
+            case 'align-center-v': MB.Align.centerV(); break;
+            case 'distribute-h': MB.Align.distributeH(); break;
+            case 'distribute-v': MB.Align.distributeV(); break;
+            case 'export-gcode': MB.GCode.exportFile(); break;
+            case 'array-pattern': MB.ArrayPattern.openDialog(); break;
+            case 'path-offset': MB.PathOffset.openDialog(); break;
         }
     },
 
@@ -378,11 +452,19 @@ MB.App = {
 
         // Enable/disable buttons based on selection
         const items = this.selectedItems;
+        const copyBtn = menu.querySelector('[data-action="ctx-copy"]');
+        const cutBtn = menu.querySelector('[data-action="ctx-cut"]');
+        const pasteBtn = menu.querySelector('[data-action="ctx-paste"]');
+        const dupBtn = menu.querySelector('[data-action="ctx-duplicate"]');
         const groupBtn = menu.querySelector('[data-action="group"]');
         const ungroupBtn = menu.querySelector('[data-action="ungroup"]');
         const flattenBtn = menu.querySelector('[data-action="flatten-to-path"]');
         const deleteBtn = menu.querySelector('[data-action="delete-selected"]');
 
+        if (copyBtn) copyBtn.disabled = items.length === 0;
+        if (cutBtn) cutBtn.disabled = items.length === 0;
+        if (pasteBtn) pasteBtn.disabled = !this.clipboard || this.clipboard.length === 0;
+        if (dupBtn) dupBtn.disabled = items.length === 0;
         if (groupBtn) groupBtn.disabled = items.length < 2;
         if (ungroupBtn) ungroupBtn.disabled = !(items.length === 1 && items[0] instanceof paper.Group);
         if (flattenBtn) flattenBtn.disabled = !(items.length === 1 && MB.Parametric && MB.Parametric.isParametric(items[0]));
@@ -420,6 +502,10 @@ MB.App = {
             if (!btn || btn.disabled) return;
             const action = btn.dataset.action;
             switch (action) {
+                case 'ctx-copy': this.copySelected(); break;
+                case 'ctx-cut': this.cutSelected(); break;
+                case 'ctx-paste': this.pasteClipboard(); break;
+                case 'ctx-duplicate': this.duplicateSelected(); break;
                 case 'group': this.groupSelected(); break;
                 case 'ungroup': this.ungroupSelected(); break;
                 case 'flatten-to-path':
@@ -448,6 +534,10 @@ MB.App = {
             if (ctrl && e.key === 'z') { e.preventDefault(); MB.History.undo(); }
             else if (ctrl && e.key === 'Z') { e.preventDefault(); MB.History.redo(); }
             else if (ctrl && e.key === 'a') { e.preventDefault(); this.selectAll(); }
+            else if (ctrl && (e.key === 'c' || e.key === 'C') && !shift) { e.preventDefault(); this.copySelected(); }
+            else if (ctrl && (e.key === 'x' || e.key === 'X') && !shift) { e.preventDefault(); this.cutSelected(); }
+            else if (ctrl && (e.key === 'v' || e.key === 'V') && !shift) { e.preventDefault(); this.pasteClipboard(); }
+            else if (ctrl && (e.key === 'd' || e.key === 'D') && !shift) { e.preventDefault(); this.duplicateSelected(); }
             else if (ctrl && shift && (e.key === 'g' || e.key === 'G')) { e.preventDefault(); this.ungroupSelected(); }
             else if (ctrl && (e.key === 'g' || e.key === 'G')) { e.preventDefault(); this.groupSelected(); }
             // Single-key shortcuts (only when Ctrl/Cmd is NOT held)

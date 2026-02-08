@@ -112,7 +112,7 @@ async def websocket_machine(ws: WebSocket):
                         except (IndexError, ValueError):
                             pass
                     elif line == 'ok':
-                        pass  # command acknowledged
+                        await ws.send_json({"type": "ok"})
                     elif line.startswith('error'):
                         await ws.send_json({"type": "error", "text": line})
                     else:

@@ -47,6 +47,55 @@ MB.ObjectsList = {
                 div.classList.add('selected');
             }
 
+            // Drag handle for reorder
+            const handle = document.createElement('span');
+            handle.className = 'obj-drag-handle';
+            handle.textContent = '\u2261'; // ≡
+            handle.title = 'Drag to reorder';
+            div.appendChild(handle);
+
+            // Make row draggable
+            div.draggable = true;
+            div.dataset.itemIdx = idx;
+
+            div.addEventListener('dragstart', (e) => {
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', idx);
+                div.classList.add('dragging');
+                this._dragIdx = idx;
+            });
+            div.addEventListener('dragend', () => {
+                div.classList.remove('dragging');
+                container.querySelectorAll('.obj-item').forEach(el => {
+                    el.classList.remove('drop-above', 'drop-below');
+                });
+            });
+            div.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                const rect = div.getBoundingClientRect();
+                const mid = rect.top + rect.height / 2;
+                const above = e.clientY < mid;
+                div.classList.toggle('drop-above', above);
+                div.classList.toggle('drop-below', !above);
+            });
+            div.addEventListener('dragleave', () => {
+                div.classList.remove('drop-above', 'drop-below');
+            });
+            div.addEventListener('drop', (e) => {
+                e.preventDefault();
+                div.classList.remove('drop-above', 'drop-below');
+                const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+                const toIdx = idx;
+                if (fromIdx === toIdx) return;
+
+                const rect = div.getBoundingClientRect();
+                const mid = rect.top + rect.height / 2;
+                const above = e.clientY < mid;
+
+                this._reorderItem(items, fromIdx, toIdx, above);
+            });
+
             // Color swatch
             const swatch = document.createElement('span');
             swatch.className = 'obj-color';
@@ -98,6 +147,20 @@ MB.ObjectsList = {
 
             container.appendChild(div);
         });
+    },
+
+    _reorderItem(items, fromIdx, toIdx, above) {
+        const item = items[fromIdx];
+        const target = items[toIdx];
+        if (!item || !target || item === target) return;
+
+        MB.History.snapshot();
+        if (above) {
+            item.insertBelow(target);
+        } else {
+            item.insertAbove(target);
+        }
+        this.render();
     },
 
     _getTypeName(item) {

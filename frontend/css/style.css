@@ -990,6 +990,19 @@ input[type="color"]::-webkit-color-swatch { border: 1px solid var(--border); bor
     border: 1px solid var(--border);
     flex-shrink: 0;
 }
+.obj-drag-handle {
+    cursor: grab;
+    color: var(--text-muted);
+    font-size: 14px;
+    flex-shrink: 0;
+    width: 14px;
+    text-align: center;
+    opacity: 0.4;
+}
+.obj-drag-handle:hover { opacity: 1; }
+.obj-item.dragging { opacity: 0.3; }
+.obj-item.drop-above { box-shadow: inset 0 2px 0 0 var(--accent); }
+.obj-item.drop-below { box-shadow: inset 0 -2px 0 0 var(--accent); }
 .obj-empty {
     padding: 8px 10px;
     font-size: 11px;
