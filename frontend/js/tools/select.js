@@ -278,15 +278,17 @@
             tolerance: 5 / paper.view.zoom
         });
 
-        // Walk up parent chain to find the isUserItem ancestor
-        // (CompoundPath/Group children don't have isUserItem directly)
+        // Walk up parent chain to find the topmost isUserItem ancestor
+        // (so clicking inside a Group selects the Group, not a child)
         let hitItem = hitResult ? hitResult.item : null;
-        if (hitItem && !(hitItem.data && hitItem.data.isUserItem)) {
-            while (hitItem && hitItem.parent && hitItem.parent !== hitItem.layer) {
-                hitItem = hitItem.parent;
-                if (hitItem.data && hitItem.data.isUserItem) break;
+        if (hitItem) {
+            let topItem = null;
+            let current = hitItem;
+            while (current && current !== current.layer) {
+                if (current.data && current.data.isUserItem) topItem = current;
+                current = current.parent;
             }
-            if (!(hitItem && hitItem.data && hitItem.data.isUserItem)) hitItem = null;
+            hitItem = topItem;
         }
 
         if (hitItem) {

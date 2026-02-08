@@ -128,6 +128,74 @@ MB.Mandala = {
         this.drawGuides();
     },
 
+    // ---- Flatten (convert to permanent object) ----
+
+    flatten() {
+        if (!this.active || !this.center) return;
+
+        // Collect source items
+        const sourceItems = [];
+        MB.Layers.layers.forEach(layer => {
+            if (!layer.visible) return;
+            layer.paperLayer.children.forEach(item => {
+                if (item.data && item.data.isUserItem) {
+                    sourceItems.push(item);
+                }
+            });
+        });
+        if (sourceItems.length === 0) return;
+
+        MB.History.snapshot();
+
+        const angleStep = 360 / this.segments;
+        const allItems = [];
+
+        for (const item of sourceItems) {
+            allItems.push(item); // keep original
+
+            // Rotated copies
+            for (let i = 1; i < this.segments; i++) {
+                const copy = item.clone();
+                copy.data = { isUserItem: true };
+                copy.selected = false;
+                copy.rotate(angleStep * i, this.center);
+                allItems.push(copy);
+            }
+
+            // Mirror copies
+            if (this.mirror) {
+                for (let i = 0; i < this.segments; i++) {
+                    const mc = item.clone();
+                    mc.data = { isUserItem: true };
+                    mc.selected = false;
+                    const refAngle = i * angleStep;
+                    mc.translate(this.center.negate());
+                    mc.rotate(-refAngle, new paper.Point(0, 0));
+                    mc.scale(1, -1, new paper.Point(0, 0));
+                    mc.rotate(refAngle, new paper.Point(0, 0));
+                    mc.translate(this.center);
+                    allItems.push(mc);
+                }
+            }
+        }
+
+        // Group everything into one object
+        const layer = MB.Layers.getActiveLayer();
+        if (layer) layer.paperLayer.activate();
+
+        const group = new paper.Group(allItems);
+        group.data = { isUserItem: true };
+
+        // Turn off mandala mode
+        this.toggleActive();
+
+        // Select the flattened group
+        MB.App.select(group);
+
+        document.getElementById('status-info').textContent =
+            'Mandala flattened to group (' + allItems.length + ' items). You can now edit, boolean, export.';
+    },
+
     // ---- Live Mirror System ----
 
     rebuildMirrors() {
@@ -346,8 +414,12 @@ MB.Mandala = {
 
         // "Click to set center" button
         document.getElementById('mandala-set-center').addEventListener('click', () => {
-            // Switch to mandala tool to place center
             MB.App.setTool('mandala');
+        });
+
+        // Flatten button
+        document.getElementById('mandala-flatten').addEventListener('click', () => {
+            this.flatten();
         });
     },
 
