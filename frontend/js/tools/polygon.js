@@ -102,6 +102,7 @@
             shapeType: 'polygon',
             shapeParams: { sides: sides, isStar: star, innerRatio: ratio, radius: radius }
         };
+        MB.App.select(poly);
     };
 
     // Register parametric builder (builds centered at origin)

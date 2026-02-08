@@ -76,6 +76,7 @@
             shapeType: 'ellipse',
             shapeParams: { radiusX: rect.width / 2, radiusY: rect.height / 2 }
         };
+        MB.App.select(ellipse);
     };
 
     // Register parametric builder

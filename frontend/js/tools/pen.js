@@ -169,11 +169,17 @@
 
         if (!path || path.segments.length < 2) {
             if (path) path.remove();
+            path = null;
+            currentSegment = null;
+            updatePenInfo();
+            return;
         }
 
+        const finished = path;
         path = null;
         currentSegment = null;
         updatePenInfo();
+        MB.App.select(finished);
     }
 
     // Close path button

@@ -77,6 +77,7 @@
             shapeType: 'rect',
             shapeParams: { width: rect.bounds.width, height: rect.bounds.height }
         };
+        MB.App.select(rect);
     };
 
     // Register parametric builder

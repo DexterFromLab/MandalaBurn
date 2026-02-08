@@ -1,4 +1,4 @@
-// MandalaBurn - Mandala Editor (Radial Symmetry Drawing)
+// MandalaBurn - Mandala Editor (Live Radial Symmetry Mirroring)
 MB.Mandala = {
     active: false,
     center: null,           // paper.Point
@@ -9,17 +9,21 @@ MB.Mandala = {
     ringSpacing: 20,        // mm between rings
 
     _guideLayer: null,
-    _processing: false,
-    _settingCenter: false,  // waiting for center click
+    _mirrorLayer: null,
     _tool: null,            // paper.Tool for center placement
+    _rafId: null,
 
     init() {
         // Create guide layer (above background, below user layers)
         const bgLayer = MB.Canvas.bgLayer;
         this._guideLayer = new paper.Layer({ name: 'mandala-guides' });
         this._guideLayer.visible = false;
-        // Move guide layer right above background
         this._guideLayer.insertAbove(bgLayer);
+
+        // Create mirror layer (above everything for live mirror copies)
+        this._mirrorLayer = new paper.Layer({ name: 'mandala-mirrors' });
+        this._mirrorLayer.visible = false;
+        this._mirrorLayer.locked = true;  // prevent hit-testing on mirrors
 
         // Activate user layer
         const al = MB.Layers.getActiveLayer();
@@ -41,12 +45,15 @@ MB.Mandala = {
         this._tool.onMouseDown = (event) => {
             const point = MB.GridSnap.snap(event.point, event);
             this.setCenter(point);
-            document.getElementById('status-info').textContent =
-                'Mandala center set. Switch to a drawing tool to start creating.';
+            // Auto-switch to select tool so user can start drawing immediately
+            setTimeout(() => {
+                MB.App.setTool('select');
+                document.getElementById('status-info').textContent =
+                    'Mandala center set. Draw with any tool \u2014 shapes will be mirrored live.';
+            }, 0);
         };
 
         this._tool.onMouseMove = (event) => {
-            // Show crosshair preview at mouse pos if no center yet
             if (!this.center) {
                 document.getElementById('status-info').textContent =
                     'Click canvas to set mandala center point.';
@@ -59,12 +66,15 @@ MB.Mandala = {
     activate() {
         this.active = true;
         this._guideLayer.visible = true;
+        this._mirrorLayer.visible = true;
         this._tool.activate();
+        this._syncToolbarButton();
+        this._startLiveUpdate();
 
         if (this.center) {
             this.drawGuides();
             document.getElementById('status-info').textContent =
-                'Mandala mode active. Draw with any tool for radial symmetry.';
+                'Click canvas to move mandala center, or switch to a drawing tool.';
         } else {
             document.getElementById('status-info').textContent =
                 'Click canvas to set mandala center point.';
@@ -80,11 +90,33 @@ MB.Mandala = {
         if (this.active) {
             this.active = false;
             this._guideLayer.visible = false;
+            this._mirrorLayer.visible = false;
             this.clearGuides();
+            this._clearMirrors();
+            this._stopLiveUpdate();
             document.getElementById('status-info').textContent = 'Mandala mode off.';
         } else {
-            this.activate();
+            this.active = true;
+            this._guideLayer.visible = true;
+            this._mirrorLayer.visible = true;
+            this._startLiveUpdate();
+            if (this.center) {
+                this.drawGuides();
+                this.rebuildMirrors();
+                document.getElementById('status-info').textContent =
+                    'Mandala mode active. Draw with any tool for radial symmetry.';
+            } else {
+                // Need to set center first — switch to mandala tool
+                MB.App.setTool('mandala');
+            }
         }
+        this._syncToolbarButton();
+        MB.App._updateToolOptions(MB.App.activeTool);
+    },
+
+    _syncToolbarButton() {
+        const btn = document.querySelector('.tool-btn[data-tool="mandala"]');
+        if (btn) btn.classList.toggle('mandala-active', this.active);
     },
 
     // ---- Center Point ----
@@ -94,6 +126,84 @@ MB.Mandala = {
         document.getElementById('mandala-cx').value = point.x.toFixed(1);
         document.getElementById('mandala-cy').value = point.y.toFixed(1);
         this.drawGuides();
+    },
+
+    // ---- Live Mirror System ----
+
+    rebuildMirrors() {
+        this._clearMirrors();
+        if (!this.active || !this.center) return;
+
+        const angleStep = 360 / this.segments;
+
+        // Collect all source items first (avoid modifying arrays during iteration)
+        const sourceItems = [];
+        MB.Layers.layers.forEach(layer => {
+            if (!layer.visible) return;
+            layer.paperLayer.children.forEach(item => {
+                if (item.data && item.data.isUserItem) {
+                    sourceItems.push(item);
+                }
+            });
+        });
+
+        // Create mirrors for each source item
+        for (const item of sourceItems) {
+            this._createItemMirrors(item, angleStep);
+        }
+    },
+
+    _createItemMirrors(item, angleStep) {
+        // Rotated copies (i=0 is the original on the user layer, skip it)
+        for (let i = 1; i < this.segments; i++) {
+            const copy = item.clone();
+            copy.data = {};
+            copy.selected = false;
+            copy.rotate(angleStep * i, this.center);
+            this._mirrorLayer.addChild(copy);
+        }
+
+        // Mirror copies (one per segment)
+        if (this.mirror) {
+            for (let i = 0; i < this.segments; i++) {
+                const mc = item.clone();
+                mc.data = {};
+                mc.selected = false;
+                const refAngle = i * angleStep;
+                // Reflect across radial line at refAngle:
+                // translate center to origin, rotate to align axis, flip, rotate back, translate back
+                mc.translate(this.center.negate());
+                mc.rotate(-refAngle, new paper.Point(0, 0));
+                mc.scale(1, -1, new paper.Point(0, 0));
+                mc.rotate(refAngle, new paper.Point(0, 0));
+                mc.translate(this.center);
+                this._mirrorLayer.addChild(mc);
+            }
+        }
+    },
+
+    _clearMirrors() {
+        if (this._mirrorLayer) this._mirrorLayer.removeChildren();
+    },
+
+    _startLiveUpdate() {
+        if (this._rafId) return;
+        const update = () => {
+            if (!this.active) {
+                this._rafId = null;
+                return;
+            }
+            this.rebuildMirrors();
+            this._rafId = requestAnimationFrame(update);
+        };
+        this._rafId = requestAnimationFrame(update);
+    },
+
+    _stopLiveUpdate() {
+        if (this._rafId) {
+            cancelAnimationFrame(this._rafId);
+            this._rafId = null;
+        }
     },
 
     // ---- Guide Rendering ----
@@ -173,86 +283,6 @@ MB.Mandala = {
 
     clearGuides() {
         if (this._guideLayer) this._guideLayer.removeChildren();
-    },
-
-    // ---- Item Replication ----
-
-    _onNewSelection(items) {
-        if (!this.active || !this.center || this._processing) return;
-
-        // Find items that need replication:
-        // - Must be isUserItem
-        // - Must NOT be a mandala group already
-        // - Must NOT be inside a mandala group
-        const toReplicate = [];
-        for (const item of items) {
-            if (!item || !item.data || !item.data.isUserItem) continue;
-            if (item.data.isMandalaGroup) continue;
-            if (item.parent && item.parent.data && item.parent.data.isMandalaGroup) continue;
-            // Skip if this is a guide or simulator item
-            if (item.layer === this._guideLayer) continue;
-            toReplicate.push(item);
-        }
-
-        if (toReplicate.length === 0) return;
-
-        this._processing = true;
-        try {
-            for (const item of toReplicate) {
-                this._replicateItem(item);
-            }
-        } finally {
-            this._processing = false;
-        }
-    },
-
-    _replicateItem(item) {
-        const angleStep = 360 / this.segments;
-        const copies = [item];
-
-        // Create rotated copies
-        for (let i = 1; i < this.segments; i++) {
-            const copy = item.clone();
-            copy.rotate(angleStep * i, this.center);
-            copies.push(copy);
-        }
-
-        // Mirror copies if enabled
-        if (this.mirror) {
-            const mirrorCopies = [];
-            for (let i = 0; i < this.segments; i++) {
-                const mc = copies[i].clone();
-                // Reflect across radial line at angle (i * angleStep)
-                // Method: translate to origin, reflect across the line, translate back
-                const refAngle = i * angleStep;
-                // Paper.js trick: scale(-1,1) + rotate to get reflection across arbitrary axis
-                const refRad = refAngle * Math.PI / 180;
-                // Transform: move center to origin, reflect, move back
-                mc.translate(this.center.negate());
-                // Reflect across line at refAngle from x-axis:
-                // rotate(-refAngle), scale(1,-1), rotate(refAngle)
-                mc.rotate(-refAngle, new paper.Point(0, 0));
-                mc.scale(1, -1, new paper.Point(0, 0));
-                mc.rotate(refAngle, new paper.Point(0, 0));
-                mc.translate(this.center);
-                mirrorCopies.push(mc);
-            }
-            copies.push(...mirrorCopies);
-        }
-
-        // Group all copies
-        const layer = item.layer || (MB.Layers.getActiveLayer() && MB.Layers.getActiveLayer().paperLayer);
-        const group = new paper.Group(copies);
-        group.data = { isUserItem: true, isMandalaGroup: true, mandalaSegments: this.segments };
-
-        // Ensure group is in the correct layer
-        if (layer && group.layer !== layer) {
-            layer.addChild(group);
-        }
-
-        MB.App.selectedItems = [group];
-        group.selected = true;
-        MB.App.emit('selection-changed', MB.App.selectedItems);
     },
 
     // ---- UI Wiring ----

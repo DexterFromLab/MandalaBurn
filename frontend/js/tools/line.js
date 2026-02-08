@@ -68,6 +68,7 @@
             strokeCap: 'round'
         });
         line.data = { isUserItem: true };
+        MB.App.select(line);
     };
 
     function constrainAngle(from, to) {

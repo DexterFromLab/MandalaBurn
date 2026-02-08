@@ -135,6 +135,7 @@ body {
 }
 .tool-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
 .tool-btn.active { background: var(--accent); color: white; border-color: var(--accent-hover); }
+.tool-btn.mandala-active { box-shadow: 0 0 0 2px #6c8fef; border-color: #6c8fef; }
 
 .tool-btn svg {
     width: 20px;
