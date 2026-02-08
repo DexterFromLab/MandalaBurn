@@ -91,6 +91,8 @@
         for (const p of paths) {
             if (p instanceof paper.CompoundPath && p.children.length > 1) {
                 const kids = p.children.slice();
+                // Classify before moving (need sibling context)
+                const isHoleArr = [];
                 for (let i = 0; i < kids.length; i++) {
                     let isHole = false;
                     try {
@@ -107,11 +109,19 @@
                             }
                         }
                     } catch (e) { /* classification failed, treat as outer */ }
-                    (isHole ? holes : outers).push(kids[i].clone());
+                    isHoleArr.push(isHole);
                 }
-                p.remove();
+                // Move children out of CompoundPath (not clone — clone stays in parent)
+                const layer = paper.project.activeLayer;
+                for (let i = 0; i < kids.length; i++) {
+                    layer.addChild(kids[i]);
+                    (isHoleArr[i] ? holes : outers).push(kids[i]);
+                }
+                p.remove(); // now empty
             } else if (p instanceof paper.CompoundPath && p.children.length === 1) {
-                outers.push(p.children[0].clone());
+                const child = p.children[0];
+                paper.project.activeLayer.addChild(child);
+                outers.push(child);
                 p.remove();
             } else {
                 outers.push(p);
