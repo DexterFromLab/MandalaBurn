@@ -136,6 +136,19 @@
                 <svg viewBox="0 0 24 24"><path d="M3 5h18v14H3V5zm2 2v10h14V7H5zm2 2h2v2H7V9zm4 0h2v2h-2V9zm4 0h2v2h-2V9zm-8 4h2v2H7v-2zm4 0h2v2h-2v-2z" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
             </button>
             <div class="toolbar-separator"></div>
+            <!-- Mandala section -->
+            <span class="toolbar-label">Mandala</span>
+            <button class="tool-btn" data-tool="mandala" title="Mandala (D)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <circle cx="12" cy="12" r="10"/>
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="2" x2="12" y2="22"/>
+                    <line x1="2" y1="12" x2="22" y2="12"/>
+                    <line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/>
+                    <line x1="19.1" y1="4.9" x2="4.9" y2="19.1"/>
+                </svg>
+            </button>
+            <div class="toolbar-separator"></div>
             <!-- Boolean ops section -->
             <span class="toolbar-label">Bool</span>
             <button class="tool-btn" data-action="bool-unite" title="Unite">
@@ -295,6 +308,48 @@
                 </div>
                 <div class="prop-row">
                     <label><input type="checkbox" id="text-unite" checked> Unite overlaps</label>
+                </div>
+            </div>
+            <!-- Mandala tool options -->
+            <div class="tool-opts" data-tool="mandala">
+                <div class="tool-opts-title">Mandala</div>
+                <div class="prop-row">
+                    <label>Segments</label>
+                    <input type="number" id="mandala-segments" value="8" min="2" max="64" step="1" style="width:50px">
+                </div>
+                <div class="prop-row">
+                    <div class="btn-group" id="mandala-seg-presets">
+                        <button class="bg-btn" data-val="4">4</button>
+                        <button class="bg-btn" data-val="6">6</button>
+                        <button class="bg-btn active" data-val="8">8</button>
+                        <button class="bg-btn" data-val="12">12</button>
+                        <button class="bg-btn" data-val="16">16</button>
+                    </div>
+                </div>
+                <div class="prop-row">
+                    <label><input type="checkbox" id="mandala-mirror" checked> Mirror</label>
+                </div>
+                <div class="prop-row">
+                    <label><input type="checkbox" id="mandala-guides" checked> Guides</label>
+                </div>
+                <div class="prop-row">
+                    <label><input type="checkbox" id="mandala-rings" checked> Rings</label>
+                </div>
+                <div class="prop-row">
+                    <label>Ring gap</label>
+                    <input type="number" id="mandala-ring-spacing" value="20" min="5" max="200" step="5" style="width:50px">
+                    <span class="unit-label">mm</span>
+                </div>
+                <div class="prop-row">
+                    <label>Center</label>
+                    <input type="number" id="mandala-cx" step="0.1" style="width:50px" placeholder="X">
+                    <input type="number" id="mandala-cy" step="0.1" style="width:50px" placeholder="Y">
+                </div>
+                <div class="prop-row">
+                    <button class="to-btn" id="mandala-set-center">Click to set center</button>
+                </div>
+                <div class="prop-row" style="font-size:10px;color:var(--text-muted)">
+                    Set center, then draw with any tool. Symmetry stays active.
                 </div>
             </div>
         </div>
@@ -810,5 +865,6 @@
     <script src="/js/font-manager.js"></script>
     <script src="/js/tools/text.js"></script>
     <script src="/js/simulator.js"></script>
+    <script src="/js/mandala.js"></script>
 </body>
 </html>

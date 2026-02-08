@@ -9,7 +9,7 @@ MB.App = {
     clipboard: null,
 
     // Tools that have an options panel
-    _toolsWithOptions: ['select', 'pen', 'ruler', 'polygon', 'node-edit', 'text'],
+    _toolsWithOptions: ['select', 'pen', 'ruler', 'polygon', 'node-edit', 'text', 'mandala'],
 
     // Default layer colors (LightBurn style)
     layerColors: [
@@ -31,6 +31,7 @@ MB.App = {
         MB.ProjectIO.init();
         MB.FontManager.init();
         MB.Simulator.init();
+        MB.Mandala.init();
 
         this.initMenus();
         this.initToolOptions();
@@ -166,6 +167,12 @@ MB.App = {
         this.selectedItems.forEach(item => {
             item.selected = true;
         });
+
+        // Mandala replication hook — replicate newly created items
+        if (MB.Mandala && MB.Mandala.active && MB.Mandala.center && !MB.Mandala._processing) {
+            MB.Mandala._onNewSelection(this.selectedItems);
+        }
+
         this.emit('selection-changed', this.selectedItems);
     },
 
@@ -451,6 +458,7 @@ MB.App = {
             else if (!ctrl && (e.key === 'n' || e.key === 'N')) { this.setTool('node-edit'); }
             else if (!ctrl && (e.key === 'm' || e.key === 'M')) { this.setTool('ruler'); }
             else if (!ctrl && (e.key === 't' || e.key === 'T')) { this.setTool('text'); }
+            else if (!ctrl && (e.key === 'd' || e.key === 'D')) { this.setTool('mandala'); }
             else if (!ctrl && (e.key === 'g' || e.key === 'G')) { MB.GridSnap.toggleGrid(); }
             else if (!ctrl && (e.key === 's' || e.key === 'S') && this.activeTool !== 'node-edit') { MB.GridSnap.toggleSnap(); }
             // Transform mode shortcuts (1/2/3) — work from any tool
