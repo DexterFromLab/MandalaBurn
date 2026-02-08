@@ -57,7 +57,7 @@
     tool.onMouseDown = function(event) {
         const layer = MB.Layers.getActiveLayer();
         if (!layer || layer.locked) return;
-        center = MB.GridSnap.snap(event.point);
+        center = MB.GridSnap.snap(event.point, event);
     };
 
     tool.onMouseDrag = function(event) {

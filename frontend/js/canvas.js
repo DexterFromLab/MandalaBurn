@@ -49,6 +49,13 @@ MB.Canvas = {
             const pt = e.point;
             document.getElementById('status-coords').textContent =
                 `X: ${pt.x.toFixed(1)} Y: ${pt.y.toFixed(1)}`;
+            // Show current snap step (Ctrl = fine)
+            const gs = MB.GridSnap;
+            if (gs.snapEnabled) {
+                const s = gs._ctrlHeld ? gs.snapStep / 10 : gs.snapStep;
+                document.getElementById('status-info').textContent =
+                    'Snap: ' + s + 'mm' + (gs._ctrlHeld ? ' (fine)' : '');
+            }
         };
 
         // Canvas settings inputs
@@ -136,6 +143,7 @@ MB.Canvas = {
     updateZoomDisplay() {
         document.getElementById('status-zoom').textContent =
             Math.round(paper.view.zoom * 100) + '%';
+        MB.App.emit('view-changed');
     },
 
     // --- Pan ---
@@ -155,6 +163,7 @@ MB.Canvas = {
             const delta = this._panStart.subtract(current).divide(paper.view.zoom);
             paper.view.center = paper.view.center.add(delta);
             this._panStart = current;
+            MB.App.emit('view-changed');
         }
     },
 

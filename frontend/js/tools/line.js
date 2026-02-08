@@ -9,7 +9,7 @@
         const layer = MB.Layers.getActiveLayer();
         if (!layer || layer.locked) return;
 
-        const point = MB.GridSnap.snap(event.point);
+        const point = MB.GridSnap.snap(event.point, event);
         if (!startPoint) {
             startPoint = point;
         }
@@ -18,7 +18,7 @@
     tool.onMouseMove = function(event) {
         if (startPoint) {
             if (preview) preview.remove();
-            let endPoint = MB.GridSnap.snap(event.point);
+            let endPoint = MB.GridSnap.snap(event.point, event);
 
             // Shift = constrain to 45 degree angles
             if (event.modifiers.shift) {
@@ -40,7 +40,7 @@
         const layer = MB.Layers.getActiveLayer();
         if (!layer) return;
 
-        let endPoint = MB.GridSnap.snap(event.point);
+        let endPoint = MB.GridSnap.snap(event.point, event);
         if (event.modifiers.shift) {
             endPoint = constrainAngle(startPoint, endPoint);
         }

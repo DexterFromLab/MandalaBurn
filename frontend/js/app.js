@@ -7,6 +7,9 @@ MB.App = {
     selectedItems: [],
     clipboard: null,
 
+    // Tools that have an options panel
+    _toolsWithOptions: ['select', 'pen', 'ruler', 'polygon'],
+
     // Default layer colors (LightBurn style)
     layerColors: [
         '#ff0000', '#0000ff', '#00aa00', '#ff8800',
@@ -21,11 +24,13 @@ MB.App = {
         MB.Properties.init();
         MB.History.init();
         MB.ObjectsList.init();
+        MB.Rulers.init();
         MB.BooleanOps.init();
         MB.Machine.init();
         MB.ProjectIO.init();
 
         this.initMenus();
+        this.initToolOptions();
         this.initKeyboard();
         this.initCollapsiblePanels();
         this.setTool('select');
@@ -61,12 +66,71 @@ MB.App = {
         document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.tool === name);
         });
-        // Update polygon options visibility
-        const polyOpts = document.getElementById('polygon-options');
-        if (polyOpts) polyOpts.classList.toggle('hidden', name !== 'polygon');
+        // Update tool options panel
+        this._updateToolOptions(name);
         // Status
         document.getElementById('status-tool').textContent = name.charAt(0).toUpperCase() + name.slice(1);
         this.emit('tool-changed', name);
+    },
+
+    _updateToolOptions(name) {
+        const panel = document.getElementById('tool-options');
+        if (!panel) return;
+        const hasOpts = this._toolsWithOptions.includes(name);
+        panel.classList.toggle('hidden', !hasOpts);
+        panel.querySelectorAll('.tool-opts').forEach(opts => {
+            opts.classList.toggle('active', opts.dataset.tool === name);
+        });
+    },
+
+    // --- Tool Options Panel ---
+    initToolOptions() {
+        const panel = document.getElementById('tool-options');
+        if (!panel) return;
+
+        // Select tool: transform mode buttons
+        panel.querySelectorAll('.to-btn[data-mode]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                panel.querySelectorAll('.to-btn[data-mode]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const mode = btn.dataset.mode;
+                const scaleOpts = document.getElementById('scale-opts');
+                const rotateOpts = document.getElementById('rotate-opts');
+                if (scaleOpts) scaleOpts.classList.toggle('hidden', mode !== 'scale');
+                if (rotateOpts) rotateOpts.classList.toggle('hidden', mode !== 'rotate');
+                this.emit('transform-mode-changed', mode);
+            });
+        });
+
+        // Rotate quick buttons
+        panel.querySelectorAll('.to-btn[data-rotate]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const angle = parseFloat(btn.dataset.rotate);
+                if (this.selectedItems.length > 0) {
+                    MB.History.snapshot();
+                    this.selectedItems.forEach(item => {
+                        item.rotate(angle, item.bounds.center);
+                    });
+                    this.emit('selection-changed', this.selectedItems);
+                }
+            });
+        });
+
+        // Rotate angle input
+        const rotAngle = document.getElementById('rotate-angle');
+        if (rotAngle) {
+            rotAngle.addEventListener('change', () => {
+                const angle = parseFloat(rotAngle.value) || 0;
+                if (this.selectedItems.length > 0 && angle !== 0) {
+                    MB.History.snapshot();
+                    this.selectedItems.forEach(item => {
+                        item.rotate(angle, item.bounds.center);
+                    });
+                    rotAngle.value = 0;
+                    this.emit('selection-changed', this.selectedItems);
+                }
+            });
+        }
     },
 
     // --- Selection ---
@@ -231,8 +295,19 @@ MB.App = {
             else if (!ctrl && (e.key === 'c' || e.key === 'C')) { this.setTool('circle'); }
             else if (!ctrl && (e.key === 'q' || e.key === 'Q')) { this.setTool('polygon'); }
             else if (!ctrl && (e.key === 'n' || e.key === 'N')) { this.setTool('node-edit'); }
+            else if (!ctrl && (e.key === 'm' || e.key === 'M')) { this.setTool('ruler'); }
             else if (!ctrl && (e.key === 'g' || e.key === 'G')) { MB.GridSnap.toggleGrid(); }
             else if (!ctrl && (e.key === 's' || e.key === 'S')) { MB.GridSnap.toggleSnap(); }
+            // Transform mode shortcuts (1/2/3) when select tool is active
+            else if (!ctrl && this.activeTool === 'select' && e.key === '1') {
+                document.querySelector('.to-btn[data-mode="move"]')?.click();
+            }
+            else if (!ctrl && this.activeTool === 'select' && e.key === '2') {
+                document.querySelector('.to-btn[data-mode="scale"]')?.click();
+            }
+            else if (!ctrl && this.activeTool === 'select' && e.key === '3') {
+                document.querySelector('.to-btn[data-mode="rotate"]')?.click();
+            }
             else if (e.key === 'Escape') {
                 this.clearSelection();
                 if (this.tools[this.activeTool] && this.tools[this.activeTool].cancel) {

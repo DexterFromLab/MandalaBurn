@@ -3,6 +3,7 @@ MB.GridSnap = {
     gridSize: 10,           // mm - visual grid spacing
     snapStep: 10,           // mm - snap resolution (defaults to grid size)
     snapEnabled: true,
+    _ctrlHeld: false,       // Ctrl = 10x finer snap
     displayMode: 'dots',    // 'lines' | 'dots' | 'none'
     majorMultiplier: 5,     // major line every N grid lines (0 = off)
     gridGroup: null,
@@ -19,6 +20,7 @@ MB.GridSnap = {
         this._initSnapControls();
         this._initMajorSelect();
         this._initCustomInputs();
+        this._initCtrlFineSnap();
     },
 
     // --- UI wiring ---
@@ -240,11 +242,34 @@ MB.GridSnap = {
         if (activeLayer) activeLayer.paperLayer.activate();
     },
 
+    // --- Ctrl fine-snap ---
+
+    _initCtrlFineSnap() {
+        // Track Ctrl from all event types for maximum reliability
+        const update = (e) => { this._ctrlHeld = e.ctrlKey; };
+        document.addEventListener('keydown', update, true);
+        document.addEventListener('keyup', update, true);
+        document.addEventListener('mousemove', update, true);
+        document.addEventListener('mousedown', update, true);
+        document.addEventListener('mouseup', update, true);
+        window.addEventListener('blur', () => { this._ctrlHeld = false; });
+    },
+
     // --- Snapping ---
 
-    snap(point) {
+    _getCtrl(event) {
+        // Paper.js ToolEvent → dig out the raw DOM event
+        if (event && event.event) return event.event.ctrlKey;
+        // Raw DOM event
+        if (event && typeof event.ctrlKey === 'boolean') return event.ctrlKey;
+        // Fallback to tracked state
+        return this._ctrlHeld;
+    },
+
+    snap(point, event) {
         if (!this.snapEnabled) return point;
-        const s = this.snapStep;
+        const ctrl = this._getCtrl(event);
+        const s = ctrl ? this.snapStep / 10 : this.snapStep;
         return new paper.Point(
             Math.round(point.x / s) * s,
             Math.round(point.y / s) * s

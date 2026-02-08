@@ -150,32 +150,83 @@ body {
     margin: 4px 0;
 }
 
-.toolbar-options {
-    position: absolute;
-    left: 50px;
-    top: 200px;
+/* Tool Options Panel (expandable left sidebar) */
+#tool-options {
+    width: 140px;
     background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 8px;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    flex-shrink: 0;
+    padding: 8px 6px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    z-index: 100;
+    gap: 6px;
 }
-.toolbar-options.hidden { display: none; }
-.toolbar-options label {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 12px;
+#tool-options.hidden { display: none; }
+.tool-opts { display: none; flex-direction: column; gap: 6px; }
+.tool-opts.active { display: flex; }
+.tool-opts-title {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+.tool-opts-sub { display: flex; flex-direction: column; gap: 4px; }
+.tool-opts-sub.hidden { display: none; }
+.to-btn-group { display: flex; gap: 2px; flex-wrap: wrap; }
+.to-btn {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 3px;
     color: var(--text-secondary);
-}
-.toolbar-options input[type="number"] { width: 50px; }
-
-/* Canvas Area */
-#canvas-container {
+    cursor: pointer;
+    padding: 3px 8px;
+    font-size: 11px;
     flex: 1;
+    text-align: center;
+    min-width: 0;
+}
+.to-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+.to-btn.active { background: var(--accent); color: white; border-color: var(--accent-hover); }
+.measure-val {
+    font-family: 'Consolas', 'SF Mono', monospace;
+    font-size: 11px;
+    color: var(--text-primary);
+}
+.tool-opts .prop-row { font-size: 11px; }
+.tool-opts .prop-row label { font-size: 11px; min-width: 28px; }
+.tool-opts .prop-row input[type="number"] { width: 50px; }
+
+/* Canvas Area with Edge Rulers */
+#canvas-area {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 20px 1fr;
+    grid-template-rows: 20px 1fr;
+    overflow: hidden;
+}
+#ruler-corner {
+    background: var(--bg-tertiary);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+#ruler-h {
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border);
+    display: block;
+    width: 100%;
+}
+#ruler-v {
+    background: var(--bg-tertiary);
+    border-right: 1px solid var(--border);
+    display: block;
+    height: 100%;
+}
+#canvas-container {
+    grid-column: 2;
+    grid-row: 2;
     position: relative;
     overflow: hidden;
     background: #181828;

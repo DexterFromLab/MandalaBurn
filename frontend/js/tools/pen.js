@@ -8,17 +8,33 @@
     const tool = new paper.Tool();
     tool.name = 'pen';
 
+    function isSmooth() {
+        const cb = document.getElementById('pen-smooth');
+        return cb && cb.checked;
+    }
+
+    function updatePenInfo() {
+        const countEl = document.getElementById('pen-seg-count');
+        const lenEl = document.getElementById('pen-length');
+        if (!countEl || !lenEl) return;
+        if (path && path.segments) {
+            countEl.textContent = 'Pts: ' + path.segments.length;
+            lenEl.textContent = 'Len: ' + path.length.toFixed(1);
+        } else {
+            countEl.textContent = 'Pts: 0';
+            lenEl.textContent = 'Len: 0';
+        }
+    }
+
     tool.onMouseDown = function(event) {
         const layer = MB.Layers.getActiveLayer();
         if (!layer || layer.locked) return;
 
-        const point = MB.GridSnap.snap(event.point);
+        const point = MB.GridSnap.snap(event.point, event);
 
         if (!path) {
-            // Snapshot before starting a new path
             MB.History.snapshot();
 
-            // Start new path
             layer.paperLayer.activate();
             path = new paper.Path({
                 strokeColor: layer.color,
@@ -34,27 +50,34 @@
                 const firstPt = path.firstSegment.point;
                 if (point.getDistance(firstPt) < 8 / paper.view.zoom) {
                     path.closePath();
+                    if (isSmooth()) path.smooth({ type: 'continuous' });
                     finishPath();
                     return;
                 }
             }
             path.add(point);
             currentSegment = path.lastSegment;
+
+            // Auto-smooth previous segments if smooth mode
+            if (isSmooth() && path.segments.length > 2) {
+                const prev = path.segments[path.segments.length - 2];
+                prev.smooth({ type: 'continuous' });
+            }
         }
+        updatePenInfo();
     };
 
     tool.onMouseDrag = function(event) {
         if (!currentSegment) return;
-        // Dragging creates smooth handles
-        const point = MB.GridSnap.snap(event.point);
+        const point = MB.GridSnap.snap(event.point, event);
         const delta = point.subtract(currentSegment.point);
         currentSegment.handleOut = delta;
         currentSegment.handleIn = delta.negate();
+        updatePenInfo();
     };
 
     tool.onMouseMove = function(event) {
         if (!path || path.segments.length === 0) return;
-        // Preview line from last point to cursor
         if (previewLine) previewLine.remove();
         const lastPt = path.lastSegment.point;
         previewLine = new paper.Path.Line({
@@ -75,10 +98,28 @@
 
         path = null;
         currentSegment = null;
+        updatePenInfo();
     }
 
+    // Close path button
+    document.addEventListener('DOMContentLoaded', () => {
+        const closeBtn = document.getElementById('pen-close-path');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                if (path && path.segments.length >= 2) {
+                    path.closePath();
+                    if (isSmooth()) path.smooth({ type: 'continuous' });
+                    finishPath();
+                }
+            });
+        }
+    });
+
     MB.App.registerTool('pen', {
-        activate() { tool.activate(); },
+        activate() {
+            tool.activate();
+            updatePenInfo();
+        },
         deactivate() {
             finishPath();
         },
@@ -91,6 +132,7 @@
                     path.remove();
                     path = null;
                     currentSegment = null;
+                    updatePenInfo();
                 }
             }
         }

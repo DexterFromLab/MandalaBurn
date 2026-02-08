@@ -137,7 +137,7 @@
         if (!selectedPath || !dragStart) return;
 
         hasDragged = true;
-        const point = MB.GridSnap.snap(event.point);
+        const point = MB.GridSnap.snap(event.point, event);
 
         if (selectedHandle && selectedSegment) {
             // Drag handle

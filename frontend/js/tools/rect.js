@@ -8,14 +8,14 @@
     tool.onMouseDown = function(event) {
         const layer = MB.Layers.getActiveLayer();
         if (!layer || layer.locked) return;
-        startPoint = MB.GridSnap.snap(event.point);
+        startPoint = MB.GridSnap.snap(event.point, event);
     };
 
     tool.onMouseDrag = function(event) {
         if (!startPoint) return;
         if (preview) preview.remove();
 
-        let endPoint = MB.GridSnap.snap(event.point);
+        let endPoint = MB.GridSnap.snap(event.point, event);
 
         // Shift = square
         if (event.modifiers.shift) {
@@ -41,7 +41,7 @@
         if (!startPoint) return;
         if (preview) { preview.remove(); preview = null; }
 
-        let endPoint = MB.GridSnap.snap(event.point);
+        let endPoint = MB.GridSnap.snap(event.point, event);
 
         if (event.modifiers.shift) {
             const dx = endPoint.x - startPoint.x;
