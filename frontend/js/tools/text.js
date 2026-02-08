@@ -74,6 +74,77 @@
     }
 
     /**
+     * Smart unite: only unite glyphs whose bounds actually overlap.
+     * Builds connected overlap groups, unites within each group,
+     * then combines everything into a single CompoundPath.
+     * Calls reorient() after each unite to fix winding (A, B, D counters).
+     */
+    function smartUnite(paths) {
+        if (paths.length <= 1) return paths[0] || null;
+
+        // Build overlap groups (union-find)
+        const parent = paths.map((_, i) => i);
+        function find(x) { return parent[x] === x ? x : (parent[x] = find(parent[x])); }
+        function union(a, b) { parent[find(a)] = find(b); }
+
+        // Check each pair — only nearby pairs can overlap
+        for (let i = 0; i < paths.length; i++) {
+            for (let j = i + 1; j < paths.length; j++) {
+                if (paths[i].bounds.intersects(paths[j].bounds)) {
+                    union(i, j);
+                }
+            }
+        }
+
+        // Collect groups
+        const groups = {};
+        paths.forEach((p, i) => {
+            const root = find(i);
+            (groups[root] = groups[root] || []).push(p);
+        });
+
+        // Unite within each group, collect results
+        const results = [];
+        for (const key of Object.keys(groups)) {
+            const group = groups[key];
+            if (group.length === 1) {
+                results.push(group[0]);
+            } else {
+                let merged = group[0];
+                for (let i = 1; i < group.length; i++) {
+                    try {
+                        const u = merged.unite(group[i]);
+                        merged.remove();
+                        group[i].remove();
+                        merged = u;
+                    } catch (e) {
+                        group[i].remove();
+                    }
+                }
+                // Fix winding directions (fixes holes in A, B, D, etc.)
+                if (merged instanceof paper.CompoundPath && merged.reorient) {
+                    merged.reorient(true, true);
+                }
+                results.push(merged);
+            }
+        }
+
+        // Combine all results into one CompoundPath
+        if (results.length === 1) return results[0];
+
+        const compound = new paper.CompoundPath({ children: [] });
+        results.forEach(p => {
+            if (p instanceof paper.CompoundPath) {
+                p.children.slice().forEach(child => compound.addChild(child.clone()));
+                p.remove();
+            } else {
+                compound.addChild(p);
+            }
+        });
+        return compound;
+    }
+
+    /**
      * Convert multiline text to Paper.js paths, then optionally unite overlaps
      */
     function createTextPaths(baseX, baseY) {
@@ -98,28 +169,13 @@
         let result;
 
         if (opts.unite && allPaths.length > 1) {
-            // Unite all paths to remove overlapping outlines
-            result = allPaths[0];
-            for (let i = 1; i < allPaths.length; i++) {
-                try {
-                    const merged = result.unite(allPaths[i]);
-                    result.remove();
-                    allPaths[i].remove();
-                    result = merged;
-                } catch (e) {
-                    // If unite fails, just group them
-                    allPaths[i].remove();
-                }
-            }
+            result = smartUnite(allPaths);
         } else if (allPaths.length > 1) {
             // Group without uniting
             result = new paper.CompoundPath({ children: [] });
             allPaths.forEach(p => {
-                // Move children from each path into the compound
                 if (p instanceof paper.CompoundPath) {
-                    p.children.slice().forEach(child => {
-                        result.addChild(child.clone());
-                    });
+                    p.children.slice().forEach(child => result.addChild(child.clone()));
                     p.remove();
                 } else {
                     result.addChild(p);
@@ -295,24 +351,12 @@
 
         let result;
         if (params.unite && allPaths.length > 1) {
-            result = allPaths[0];
-            for (let i = 1; i < allPaths.length; i++) {
-                try {
-                    const merged = result.unite(allPaths[i]);
-                    result.remove();
-                    allPaths[i].remove();
-                    result = merged;
-                } catch (e) {
-                    allPaths[i].remove();
-                }
-            }
+            result = smartUnite(allPaths);
         } else if (allPaths.length > 1) {
             result = new paper.CompoundPath({ children: [] });
             allPaths.forEach(p => {
                 if (p instanceof paper.CompoundPath) {
-                    p.children.slice().forEach(child => {
-                        result.addChild(child.clone());
-                    });
+                    p.children.slice().forEach(child => result.addChild(child.clone()));
                     p.remove();
                 } else {
                     result.addChild(p);
