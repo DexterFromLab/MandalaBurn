@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MandalaBurn - Laser CAD</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/lib/paper-full.min.js"></script>
+</head>
+<body>
+    <!-- Menu Bar -->
+    <div id="menu-bar">
+        <div class="menu-group">
+            <button class="menu-btn" data-menu="file">File</button>
+            <button class="menu-btn" data-menu="edit">Edit</button>
+            <button class="menu-btn" data-menu="tools">Tools</button>
+            <button class="menu-btn" data-menu="view">View</button>
+            <button class="menu-btn" data-menu="machine">Machine</button>
+        </div>
+        <div class="menu-title">MandalaBurn</div>
+        <!-- Connection indicator in menu bar -->
+        <div id="connection-status" class="conn-disconnected" title="Not connected">
+            <span class="conn-dot"></span>
+            <span class="conn-label">Disconnected</span>
+        </div>
+    </div>
+
+    <!-- Dropdown menus -->
+    <div id="menu-dropdown" class="menu-dropdown hidden">
+        <!-- File menu -->
+        <div class="menu-items" data-menu="file">
+            <button data-action="new-project">New Project</button>
+            <button data-action="open-project">Open Project...</button>
+            <button data-action="save-project">Save Project</button>
+            <div class="menu-separator"></div>
+            <button data-action="import-svg">Import SVG...</button>
+            <button data-action="export-svg">Export SVG</button>
+        </div>
+        <!-- Edit menu -->
+        <div class="menu-items" data-menu="edit">
+            <button data-action="undo">Undo <span class="shortcut">Ctrl+Z</span></button>
+            <button data-action="redo">Redo <span class="shortcut">Ctrl+Shift+Z</span></button>
+            <div class="menu-separator"></div>
+            <button data-action="select-all">Select All <span class="shortcut">Ctrl+A</span></button>
+            <button data-action="delete-selected">Delete <span class="shortcut">Del</span></button>
+            <div class="menu-separator"></div>
+            <button data-action="split-to-layer">Split Selection to New Layer</button>
+            <button data-action="move-to-layer">Move Selection to Layer...</button>
+            <button data-action="merge-layers">Merge Layer Down</button>
+        </div>
+        <!-- Tools menu (boolean ops) -->
+        <div class="menu-items" data-menu="tools">
+            <button data-action="bool-unite">Unite (Union)</button>
+            <button data-action="bool-subtract">Subtract (Difference)</button>
+            <button data-action="bool-intersect">Intersect</button>
+            <button data-action="bool-exclude">Exclude (XOR)</button>
+            <button data-action="bool-divide">Divide</button>
+        </div>
+        <!-- Machine menu -->
+        <div class="menu-items" data-menu="machine">
+            <button data-action="machine-settings">Machine Settings...</button>
+            <button data-action="machine-connect">Connect / Disconnect</button>
+            <div class="menu-separator"></div>
+            <button data-action="machine-home">Home <span class="shortcut">Ctrl+H</span></button>
+            <button data-action="machine-set-origin">Set Origin Here</button>
+            <button data-action="machine-goto-origin">Go to Origin</button>
+            <div class="menu-separator"></div>
+            <button data-action="machine-frame">Frame Job (trace outline)</button>
+        </div>
+        <!-- View menu -->
+        <div class="menu-items" data-menu="view">
+            <button data-action="zoom-in">Zoom In <span class="shortcut">Ctrl++</span></button>
+            <button data-action="zoom-out">Zoom Out <span class="shortcut">Ctrl+-</span></button>
+            <button data-action="zoom-fit">Zoom to Fit <span class="shortcut">Ctrl+0</span></button>
+            <div class="menu-separator"></div>
+            <button data-action="toggle-grid">Toggle Grid <span class="shortcut">G</span></button>
+            <button data-action="toggle-snap">Toggle Snap <span class="shortcut">S</span></button>
+        </div>
+    </div>
+
+    <div id="main-container">
+        <!-- Left Toolbar -->
+        <div id="toolbar">
+            <button class="tool-btn active" data-tool="select" title="Select (V)">
+                <svg viewBox="0 0 24 24"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51z"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="line" title="Line (L)">
+                <svg viewBox="0 0 24 24"><line x1="5" y1="19" x2="19" y2="5" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="pen" title="Pen (P)">
+                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="rect" title="Rectangle (R)">
+                <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="circle" title="Circle (C)">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="polygon" title="Polygon/Star (Q)">
+                <svg viewBox="0 0 24 24"><polygon points="12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="node-edit" title="Node Edit (N)">
+                <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="18" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="8" y1="8" x2="16" y2="16" stroke="currentColor" stroke-width="1.5"/></svg>
+            </button>
+            <div class="toolbar-separator"></div>
+            <!-- Boolean ops toolbar buttons -->
+            <button class="tool-btn" data-action="bool-unite" title="Unite">
+                <svg viewBox="0 0 24 24"><circle cx="9" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="15" cy="14" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+            </button>
+            <button class="tool-btn" data-action="bool-subtract" title="Subtract">
+                <svg viewBox="0 0 24 24"><circle cx="9" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="15" cy="14" r="6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2"/></svg>
+            </button>
+
+            <!-- Polygon options (shown when polygon tool active) -->
+            <div id="polygon-options" class="toolbar-options hidden">
+                <label>Sides: <input type="number" id="polygon-sides" value="5" min="3" max="64" step="1"></label>
+                <label><input type="checkbox" id="polygon-star"> Star</label>
+                <label class="hidden" id="star-ratio-label">Ratio: <input type="range" id="star-inner-ratio" min="0.1" max="0.9" step="0.05" value="0.5"></label>
+            </div>
+        </div>
+
+        <!-- Canvas Area -->
+        <div id="canvas-container">
+            <canvas id="main-canvas" resize></canvas>
+        </div>
+
+        <!-- Right Panel -->
+        <div id="right-panel">
+            <!-- Objects List -->
+            <div class="panel-section" id="objects-panel">
+                <div class="panel-header collapsible">Objects <span class="collapse-arrow"></span></div>
+                <div class="panel-body" style="padding: 0;">
+                    <div id="objects-list"></div>
+                </div>
+            </div>
+
+            <!-- Object Properties -->
+            <div class="panel-section collapsed" id="object-properties">
+                <div class="panel-header collapsible">Object<span class="collapse-arrow"></span></div>
+                <div class="panel-body">
+                    <div class="prop-row">
+                        <label>X</label><input type="number" id="prop-x" step="0.1" disabled>
+                        <label>Y</label><input type="number" id="prop-y" step="0.1" disabled>
+                    </div>
+                    <div class="prop-row">
+                        <label>W</label><input type="number" id="prop-w" step="0.1" disabled>
+                        <label>H</label><input type="number" id="prop-h" step="0.1" disabled>
+                    </div>
+                    <div class="prop-row">
+                        <label>R</label><input type="number" id="prop-r" step="1" disabled>
+                        <label>&deg;</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Laser Settings -->
+            <div class="panel-section collapsed" id="laser-settings">
+                <div class="panel-header collapsible">Laser Settings<span class="collapse-arrow"></span></div>
+                <div class="panel-body">
+                    <div class="prop-row">
+                        <label>Mode</label>
+                        <select id="laser-mode">
+                            <option value="cut">Cut</option>
+                            <option value="engrave">Engrave</option>
+                            <option value="score">Score</option>
+                        </select>
+                    </div>
+                    <div class="prop-row">
+                        <label>Power</label>
+                        <span id="laser-power-val">80%</span>
+                    </div>
+                    <div class="prop-row">
+                        <input type="range" id="laser-power" min="0" max="100" value="80" style="width:100%">
+                    </div>
+                    <div class="prop-row">
+                        <label>Speed</label>
+                        <input type="number" id="laser-speed" min="1" max="10000" value="10" step="1">
+                        <span>mm/s</span>
+                    </div>
+                    <div class="prop-row">
+                        <label>Passes</label>
+                        <input type="number" id="laser-passes" min="1" max="100" value="1" step="1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grid & Snap Settings -->
+            <div class="panel-section collapsed" id="grid-settings">
+                <div class="panel-header collapsible">Grid & Snap<span class="collapse-arrow"></span></div>
+                <div class="panel-body">
+                    <!-- Display mode -->
+                    <div class="prop-row">
+                        <label>Display</label>
+                        <div class="btn-group" id="grid-display-mode">
+                            <button class="bg-btn" data-val="lines" title="Lines">&#x2588;</button>
+                            <button class="bg-btn active" data-val="dots" title="Dots">&#x2059;</button>
+                            <button class="bg-btn" data-val="none" title="None">&#x2205;</button>
+                        </div>
+                    </div>
+                    <!-- Grid spacing -->
+                    <div class="prop-row">
+                        <label>Grid</label>
+                        <div class="btn-group" id="grid-size-presets">
+                            <button class="bg-btn" data-val="1">1</button>
+                            <button class="bg-btn" data-val="5">5</button>
+                            <button class="bg-btn active" data-val="10">10</button>
+                            <button class="bg-btn" data-val="25">25</button>
+                            <button class="bg-btn" data-val="50">50</button>
+                        </div>
+                        <span class="unit-label">mm</span>
+                    </div>
+                    <div class="prop-row">
+                        <label></label>
+                        <input type="number" id="grid-size" value="10" step="0.1" min="0.1" max="1000">
+                        <span class="unit-label">custom</span>
+                    </div>
+                    <!-- Snap toggle & resolution -->
+                    <div class="prop-row">
+                        <label>Snap</label>
+                        <button class="snap-toggle-btn" id="snap-toggle">ON</button>
+                    </div>
+                    <div class="prop-row">
+                        <label>Step</label>
+                        <div class="btn-group" id="snap-step-presets">
+                            <button class="bg-btn" data-val="0.1">0.1</button>
+                            <button class="bg-btn" data-val="0.5">0.5</button>
+                            <button class="bg-btn" data-val="1">1</button>
+                            <button class="bg-btn" data-val="5">5</button>
+                            <button class="bg-btn active" data-val="10">10</button>
+                        </div>
+                        <span class="unit-label">mm</span>
+                    </div>
+                    <div class="prop-row">
+                        <label></label>
+                        <input type="number" id="snap-step" value="10" step="0.01" min="0.01" max="1000">
+                        <span class="unit-label">custom</span>
+                    </div>
+                    <!-- Major grid multiplier -->
+                    <div class="prop-row">
+                        <label>Major</label>
+                        <select id="grid-major">
+                            <option value="0">Off</option>
+                            <option value="2">x2</option>
+                            <option value="5" selected>x5</option>
+                            <option value="10">x10</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Laser Control (Jog) -->
+            <div class="panel-section collapsed" id="jog-panel">
+                <div class="panel-header collapsible">Laser Control<span class="collapse-arrow"></span></div>
+                <div class="panel-body">
+                    <!-- Jog arrows -->
+                    <div class="jog-grid">
+                        <button class="jog-btn" data-jog="home" title="Home">H</button>
+                        <button class="jog-btn" data-jog="up" title="Y-">&#x25B2;</button>
+                        <button class="jog-btn" data-jog="set-origin" title="Set Origin">O</button>
+                        <button class="jog-btn" data-jog="left" title="X-">&#x25C0;</button>
+                        <button class="jog-btn jog-center" data-jog="laser-toggle" title="Toggle laser pointer">&#x2316;</button>
+                        <button class="jog-btn" data-jog="right" title="X+">&#x25B6;</button>
+                        <button class="jog-btn" data-jog="goto-origin" title="Go to origin">&#x2302;</button>
+                        <button class="jog-btn" data-jog="down" title="Y+">&#x25BC;</button>
+                        <button class="jog-btn" data-jog="stop" title="Stop!">&#x25A0;</button>
+                    </div>
+                    <!-- Jog step size -->
+                    <div class="prop-row" style="margin-top:6px">
+                        <label>Step</label>
+                        <select id="jog-step">
+                            <option value="0.1">0.1 mm</option>
+                            <option value="1" selected>1 mm</option>
+                            <option value="5">5 mm</option>
+                            <option value="10">10 mm</option>
+                            <option value="50">50 mm</option>
+                        </select>
+                    </div>
+                    <div class="prop-row">
+                        <label>Speed</label>
+                        <input type="number" id="jog-speed" value="1000" min="1" max="10000" step="100">
+                        <span>mm/min</span>
+                    </div>
+                    <!-- Go to point -->
+                    <div class="prop-row" style="margin-top:4px">
+                        <label>Go to</label>
+                        <input type="number" id="goto-x" placeholder="X" step="0.1" style="width:55px">
+                        <input type="number" id="goto-y" placeholder="Y" step="0.1" style="width:55px">
+                        <button class="jog-go-btn" id="goto-btn" title="Move to XY">Go</button>
+                    </div>
+                    <!-- Laser position readout -->
+                    <div class="jog-position">
+                        <span>Pos:</span>
+                        <span id="laser-pos-x">X: ---</span>
+                        <span id="laser-pos-y">Y: ---</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Machine Settings shortcut -->
+            <div class="panel-section">
+                <div class="panel-body" style="padding:6px 10px">
+                    <button class="panel-wide-btn" data-action="machine-settings">Machine Settings...</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom: Layer Panel (table layout with inline params) -->
+    <div id="layer-panel">
+        <div class="layer-toolbar">
+            <div class="layer-toolbar-group">
+                <button id="add-layer" title="Add Layer">+ Add</button>
+                <button id="remove-layer" title="Remove Layer">- Remove</button>
+                <button id="duplicate-layer" title="Duplicate Layer">Duplicate</button>
+            </div>
+            <div class="layer-toolbar-group">
+                <button id="merge-layers" title="Merge selected layer down">Merge Down</button>
+                <button id="merge-all-layers" title="Merge all visible layers">Merge All</button>
+            </div>
+            <div class="layer-toolbar-group">
+                <button id="split-to-layer" title="Move selected objects to a new layer">Split to Layer</button>
+                <button id="move-to-layer" title="Move selected objects to another layer">Move to...</button>
+            </div>
+            <div class="layer-toolbar-group">
+                <button id="move-layer-up" title="Move layer up">&uarr;</button>
+                <button id="move-layer-down" title="Move layer down">&darr;</button>
+            </div>
+        </div>
+        <div id="layer-table-wrap">
+            <table id="layer-table">
+                <thead>
+                    <tr>
+                        <th class="lc-color"></th>
+                        <th class="lc-name">Layer</th>
+                        <th class="lc-mode">Mode</th>
+                        <th class="lc-power">Power</th>
+                        <th class="lc-speed">Speed</th>
+                        <th class="lc-passes">Pass</th>
+                        <th class="lc-air">Air</th>
+                        <th class="lc-output">Out</th>
+                        <th class="lc-vis">Vis</th>
+                        <th class="lc-lock">Lock</th>
+                    </tr>
+                </thead>
+                <tbody id="layer-list"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Subtract base picker dialog -->
+    <div id="subtract-picker-dialog" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div class="modal-title">Subtract: pick the base object</div>
+            <div class="modal-subtitle">The rest will be subtracted from it</div>
+            <div id="subtract-picker-items"></div>
+            <div class="modal-buttons">
+                <button id="subtract-picker-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Move-to-layer dialog -->
+    <div id="move-to-layer-dialog" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div class="modal-title">Move selection to layer</div>
+            <div id="move-to-layer-options"></div>
+            <div class="modal-buttons">
+                <button id="move-to-layer-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div id="status-bar">
+        <span id="status-coords">X: 0.0 Y: 0.0</span>
+        <span id="status-zoom">100%</span>
+        <span id="status-tool">Select</span>
+        <span id="status-info"></span>
+    </div>
+
+    <!-- Machine Settings Dialog -->
+    <div id="machine-settings-dialog" class="modal-overlay hidden">
+        <div class="modal-box modal-wide">
+            <div class="modal-title">Machine Settings</div>
+            <div class="settings-grid">
+                <fieldset>
+                    <legend>Machine</legend>
+                    <div class="prop-row">
+                        <label>Name</label>
+                        <input type="text" id="ms-name" value="My Laser" placeholder="Machine name">
+                    </div>
+                    <div class="prop-row">
+                        <label>Model</label>
+                        <input type="text" id="ms-model" placeholder="e.g. Ortur LM3, K40...">
+                    </div>
+                    <div class="prop-row">
+                        <label>Controller</label>
+                        <select id="ms-controller">
+                            <option value="grbl" selected>GRBL</option>
+                            <option value="grbl-lpc">GRBL-LPC</option>
+                            <option value="marlin">Marlin</option>
+                        </select>
+                    </div>
+                </fieldset>
+                <fieldset>
+                    <legend>Work Area</legend>
+                    <div class="prop-row">
+                        <label>Width</label>
+                        <input type="number" id="ms-width" value="300" min="10" max="5000" step="1">
+                        <span>mm</span>
+                    </div>
+                    <div class="prop-row">
+                        <label>Height</label>
+                        <input type="number" id="ms-height" value="200" min="10" max="5000" step="1">
+                        <span>mm</span>
+                    </div>
+                    <div class="prop-row">
+                        <label>Origin</label>
+                        <select id="ms-origin">
+                            <option value="top-left" selected>Top-Left</option>
+                            <option value="bottom-left">Bottom-Left</option>
+                            <option value="center">Center</option>
+                        </select>
+                    </div>
+                </fieldset>
+                <fieldset>
+                    <legend>Limits</legend>
+                    <div class="prop-row">
+                        <label>Max speed</label>
+                        <input type="number" id="ms-max-speed" value="6000" min="1" max="100000" step="100">
+                        <span>mm/min</span>
+                    </div>
+                    <div class="prop-row">
+                        <label>Max power</label>
+                        <input type="number" id="ms-max-power" value="1000" min="1" max="10000" step="1">
+                        <span>S value</span>
+                    </div>
+                    <div class="prop-row">
+                        <label>Resolution</label>
+                        <input type="number" id="ms-resolution" value="0.1" min="0.001" max="1" step="0.001">
+                        <span>mm/step</span>
+                    </div>
+                </fieldset>
+                <fieldset>
+                    <legend>Connection</legend>
+                    <div class="prop-row">
+                        <label>Port</label>
+                        <select id="ms-port">
+                            <option value="">-- Select --</option>
+                        </select>
+                        <button id="ms-refresh-ports" title="Refresh port list">&#x21bb;</button>
+                    </div>
+                    <div class="prop-row">
+                        <label>Baud</label>
+                        <select id="ms-baud">
+                            <option value="9600">9600</option>
+                            <option value="57600">57600</option>
+                            <option value="115200" selected>115200</option>
+                            <option value="230400">230400</option>
+                        </select>
+                    </div>
+                </fieldset>
+            </div>
+            <div class="modal-buttons">
+                <button id="ms-cancel">Cancel</button>
+                <button id="ms-save" class="primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden inputs for workspace size (managed by Machine Settings) -->
+    <input type="hidden" id="canvas-w" value="300">
+    <input type="hidden" id="canvas-h" value="200">
+
+    <!-- Hidden file inputs -->
+    <input type="file" id="file-open-project" accept=".mandala,.json" style="display:none">
+    <input type="file" id="file-import-svg" accept=".svg" style="display:none">
+
+    <!-- Application scripts -->
+    <script src="/js/app.js"></script>
+    <script src="/js/canvas.js"></script>
+    <script src="/js/grid-snap.js"></script>
+    <script src="/js/layers.js"></script>
+    <script src="/js/properties.js"></script>
+    <script src="/js/history.js"></script>
+    <script src="/js/tools/select.js"></script>
+    <script src="/js/tools/line.js"></script>
+    <script src="/js/tools/pen.js"></script>
+    <script src="/js/tools/rect.js"></script>
+    <script src="/js/tools/circle.js"></script>
+    <script src="/js/tools/polygon.js"></script>
+    <script src="/js/tools/node-edit.js"></script>
+    <script src="/js/objects-list.js"></script>
+    <script src="/js/boolean-ops.js"></script>
+    <script src="/js/machine.js"></script>
+    <script src="/js/project-io.js"></script>
+</body>
+</html>

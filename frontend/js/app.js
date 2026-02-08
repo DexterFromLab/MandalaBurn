@@ -1,0 +1,250 @@
+// MandalaBurn - Application Core
+window.MB = window.MB || {};
+
+MB.App = {
+    activeTool: null,
+    tools: {},
+    selectedItems: [],
+    clipboard: null,
+
+    // Default layer colors (LightBurn style)
+    layerColors: [
+        '#ff0000', '#0000ff', '#00aa00', '#ff8800',
+        '#00cccc', '#ff00ff', '#888800', '#8800ff',
+        '#ff4444', '#4444ff', '#44aa44', '#ffaa44'
+    ],
+
+    init() {
+        MB.Canvas.init();
+        MB.GridSnap.init();
+        MB.Layers.init();
+        MB.Properties.init();
+        MB.History.init();
+        MB.ObjectsList.init();
+        MB.BooleanOps.init();
+        MB.Machine.init();
+        MB.ProjectIO.init();
+
+        this.initMenus();
+        this.initKeyboard();
+        this.initCollapsiblePanels();
+        this.setTool('select');
+    },
+
+    // --- Event Bus ---
+    _listeners: {},
+    on(event, fn) {
+        (this._listeners[event] = this._listeners[event] || []).push(fn);
+    },
+    off(event, fn) {
+        const arr = this._listeners[event];
+        if (arr) this._listeners[event] = arr.filter(f => f !== fn);
+    },
+    emit(event, data) {
+        (this._listeners[event] || []).forEach(fn => fn(data));
+    },
+
+    // --- Tool Management ---
+    registerTool(name, tool) {
+        this.tools[name] = tool;
+    },
+
+    setTool(name) {
+        if (this.activeTool && this.tools[this.activeTool] && this.tools[this.activeTool].deactivate) {
+            this.tools[this.activeTool].deactivate();
+        }
+        this.activeTool = name;
+        if (this.tools[name] && this.tools[name].activate) {
+            this.tools[name].activate();
+        }
+        // Update toolbar UI
+        document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tool === name);
+        });
+        // Update polygon options visibility
+        const polyOpts = document.getElementById('polygon-options');
+        if (polyOpts) polyOpts.classList.toggle('hidden', name !== 'polygon');
+        // Status
+        document.getElementById('status-tool').textContent = name.charAt(0).toUpperCase() + name.slice(1);
+        this.emit('tool-changed', name);
+    },
+
+    // --- Selection ---
+    select(items) {
+        this.clearSelection();
+        if (!Array.isArray(items)) items = [items];
+        this.selectedItems = items.filter(Boolean);
+        this.selectedItems.forEach(item => {
+            item.selected = true;
+        });
+        this.emit('selection-changed', this.selectedItems);
+    },
+
+    addToSelection(item) {
+        if (!item || this.selectedItems.includes(item)) return;
+        this.selectedItems.push(item);
+        item.selected = true;
+        this.emit('selection-changed', this.selectedItems);
+    },
+
+    removeFromSelection(item) {
+        const idx = this.selectedItems.indexOf(item);
+        if (idx >= 0) {
+            this.selectedItems.splice(idx, 1);
+            item.selected = false;
+            this.emit('selection-changed', this.selectedItems);
+        }
+    },
+
+    clearSelection() {
+        this.selectedItems.forEach(item => {
+            if (item && !item._removed) item.selected = false;
+        });
+        this.selectedItems = [];
+        this.emit('selection-changed', []);
+    },
+
+    deleteSelected() {
+        if (this.selectedItems.length === 0) return;
+        MB.History.snapshot();
+        this.selectedItems.forEach(item => item.remove());
+        this.clearSelection();
+    },
+
+    // --- Collapsible Panels ---
+    initCollapsiblePanels() {
+        document.querySelectorAll('.panel-header.collapsible').forEach(header => {
+            header.addEventListener('click', () => {
+                header.closest('.panel-section').classList.toggle('collapsed');
+            });
+        });
+    },
+
+    // --- Menus ---
+    initMenus() {
+        const dropdown = document.getElementById('menu-dropdown');
+        let activeMenu = null;
+
+        document.querySelectorAll('.menu-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const menuName = btn.dataset.menu;
+                if (activeMenu === menuName) {
+                    dropdown.classList.add('hidden');
+                    activeMenu = null;
+                    return;
+                }
+                activeMenu = menuName;
+                dropdown.style.left = btn.offsetLeft + 'px';
+                dropdown.classList.remove('hidden');
+                dropdown.querySelectorAll('.menu-items').forEach(m => m.classList.remove('active'));
+                dropdown.querySelector(`.menu-items[data-menu="${menuName}"]`).classList.add('active');
+            });
+        });
+
+        document.addEventListener('click', () => {
+            dropdown.classList.add('hidden');
+            activeMenu = null;
+        });
+
+        // Menu actions
+        dropdown.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-action]');
+            if (btn) {
+                this.handleAction(btn.dataset.action);
+                dropdown.classList.add('hidden');
+                activeMenu = null;
+            }
+        });
+
+        // Toolbar actions (boolean ops etc)
+        document.getElementById('toolbar').addEventListener('click', (e) => {
+            const btn = e.target.closest('.tool-btn[data-action]');
+            if (btn) this.handleAction(btn.dataset.action);
+            const toolBtn = e.target.closest('.tool-btn[data-tool]');
+            if (toolBtn) this.setTool(toolBtn.dataset.tool);
+        });
+    },
+
+    handleAction(action) {
+        switch (action) {
+            case 'undo': MB.History.undo(); break;
+            case 'redo': MB.History.redo(); break;
+            case 'select-all': this.selectAll(); break;
+            case 'delete-selected': this.deleteSelected(); break;
+            case 'bool-unite': MB.BooleanOps.unite(); break;
+            case 'bool-subtract': MB.BooleanOps.subtract(); break;
+            case 'bool-intersect': MB.BooleanOps.intersect(); break;
+            case 'bool-exclude': MB.BooleanOps.exclude(); break;
+            case 'bool-divide': MB.BooleanOps.divide(); break;
+            case 'new-project': MB.ProjectIO.newProject(); break;
+            case 'open-project': document.getElementById('file-open-project').click(); break;
+            case 'save-project': MB.ProjectIO.saveProject(); break;
+            case 'import-svg': document.getElementById('file-import-svg').click(); break;
+            case 'export-svg': MB.ProjectIO.exportSVG(); break;
+            case 'zoom-in': MB.Canvas.zoomIn(); break;
+            case 'zoom-out': MB.Canvas.zoomOut(); break;
+            case 'zoom-fit': MB.Canvas.zoomFit(); break;
+            case 'toggle-grid': MB.GridSnap.toggleGrid(); break;
+            case 'toggle-snap': MB.GridSnap.toggleSnap(); break;
+            case 'split-to-layer': MB.Layers.splitSelectionToNewLayer(); break;
+            case 'move-to-layer': MB.Layers.showMoveToLayerDialog(); break;
+            case 'merge-layers': MB.Layers.mergeDown(); break;
+            case 'machine-settings': MB.Machine.openSettings(); break;
+            case 'machine-connect': MB.Machine.connect(); break;
+            case 'machine-home': MB.Machine.sendCommand('$H'); break;
+            case 'machine-set-origin': MB.Machine.sendCommand('G92 X0 Y0'); break;
+            case 'machine-goto-origin': MB.Machine.sendGoto(0, 0); break;
+            case 'machine-frame': MB.Machine.frameJob && MB.Machine.frameJob(); break;
+        }
+    },
+
+    selectAll() {
+        const layer = MB.Layers.getActiveLayer();
+        if (!layer) return;
+        const items = [];
+        layer.paperLayer.children.forEach(child => {
+            if (child.data && child.data.isUserItem) items.push(child);
+        });
+        this.select(items);
+    },
+
+    // --- Keyboard ---
+    initKeyboard() {
+        document.addEventListener('keydown', (e) => {
+            // Don't capture when typing in inputs
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+
+            const ctrl = e.ctrlKey || e.metaKey;
+            const shift = e.shiftKey;
+
+            // Ctrl/Cmd shortcuts
+            if (ctrl && e.key === 'z') { e.preventDefault(); MB.History.undo(); }
+            else if (ctrl && e.key === 'Z') { e.preventDefault(); MB.History.redo(); }
+            else if (ctrl && e.key === 'a') { e.preventDefault(); this.selectAll(); }
+            // Single-key shortcuts (only when Ctrl/Cmd is NOT held)
+            else if (!ctrl && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); this.deleteSelected(); }
+            else if (!ctrl && (e.key === 'v' || e.key === 'V')) { this.setTool('select'); }
+            else if (!ctrl && (e.key === 'l' || e.key === 'L')) { this.setTool('line'); }
+            else if (!ctrl && (e.key === 'p' || e.key === 'P')) { this.setTool('pen'); }
+            else if (!ctrl && (e.key === 'r' || e.key === 'R')) { this.setTool('rect'); }
+            else if (!ctrl && (e.key === 'c' || e.key === 'C')) { this.setTool('circle'); }
+            else if (!ctrl && (e.key === 'q' || e.key === 'Q')) { this.setTool('polygon'); }
+            else if (!ctrl && (e.key === 'n' || e.key === 'N')) { this.setTool('node-edit'); }
+            else if (!ctrl && (e.key === 'g' || e.key === 'G')) { MB.GridSnap.toggleGrid(); }
+            else if (!ctrl && (e.key === 's' || e.key === 'S')) { MB.GridSnap.toggleSnap(); }
+            else if (e.key === 'Escape') {
+                this.clearSelection();
+                if (this.tools[this.activeTool] && this.tools[this.activeTool].cancel) {
+                    this.tools[this.activeTool].cancel();
+                }
+            }
+        });
+    }
+};
+
+// Boot
+window.addEventListener('load', () => {
+    paper.install(window);
+    MB.App.init();
+});
