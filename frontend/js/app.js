@@ -364,12 +364,14 @@ MB.App = {
             fill: true, stroke: true, segments: true, tolerance: 8 / paper.view.zoom
         });
         if (hit && hit.item) {
-            let target = hit.item;
-            while (target.parent && target.parent !== target.layer &&
-                   !(target.data && target.data.isUserItem)) {
-                target = target.parent;
+            // Walk to topmost isUserItem (so Groups are selected, not children)
+            let target = null;
+            let current = hit.item;
+            while (current && current !== current.layer) {
+                if (current.data && current.data.isUserItem) target = current;
+                current = current.parent;
             }
-            if (target.data && target.data.isUserItem && !this.selectedItems.includes(target)) {
+            if (target && !this.selectedItems.includes(target)) {
                 this.select(target);
             }
         }
