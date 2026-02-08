@@ -13,6 +13,8 @@
     let origBounds = null;
     let origItemStates = []; // [{position, scaling, rotation, matrix}]
     let hasDragged = false;
+    let lastClickTime = 0;
+    let lastClickPoint = null;
 
     const HANDLE_SIZE = 6;
     const ROTATE_OFFSET = 20;
@@ -194,6 +196,39 @@
         if (!layer || layer.locked) return;
         hasDragged = false;
 
+        // Double-click detection → enter node-edit
+        const now = Date.now();
+        const isDoubleClick = (now - lastClickTime < 400) &&
+            lastClickPoint && event.point.getDistance(lastClickPoint) < 5 / paper.view.zoom;
+        lastClickTime = now;
+        lastClickPoint = event.point.clone();
+
+        if (isDoubleClick) {
+            const dblHit = paper.project.hitTest(event.point, {
+                fill: true, stroke: true, segments: false,
+                tolerance: 5 / paper.view.zoom
+            });
+            // Walk up parent chain for CompoundPath/Group children
+            let dblItem = dblHit ? dblHit.item : null;
+            if (dblItem && !(dblItem.data && dblItem.data.isUserItem)) {
+                while (dblItem && dblItem.parent && dblItem.parent !== dblItem.layer) {
+                    dblItem = dblItem.parent;
+                    if (dblItem.data && dblItem.data.isUserItem) break;
+                }
+                if (!(dblItem && dblItem.data && dblItem.data.isUserItem)) dblItem = null;
+            }
+            if (dblItem) {
+                const item = dblItem;
+                if (item instanceof paper.Path || item instanceof paper.CompoundPath) {
+                    if (!MB.App.selectedItems.includes(item)) {
+                        MB.App.select(item);
+                    }
+                    MB.App.setTool('node-edit');
+                    return;
+                }
+            }
+        }
+
         // Check handle hit first
         if (MB.App.selectedItems.length > 0 && transformMode !== 'move') {
             const hh = hitHandle(event.point);
@@ -243,8 +278,19 @@
             tolerance: 5 / paper.view.zoom
         });
 
-        if (hitResult && hitResult.item && hitResult.item.data && hitResult.item.data.isUserItem) {
-            const item = hitResult.item;
+        // Walk up parent chain to find the isUserItem ancestor
+        // (CompoundPath/Group children don't have isUserItem directly)
+        let hitItem = hitResult ? hitResult.item : null;
+        if (hitItem && !(hitItem.data && hitItem.data.isUserItem)) {
+            while (hitItem && hitItem.parent && hitItem.parent !== hitItem.layer) {
+                hitItem = hitItem.parent;
+                if (hitItem.data && hitItem.data.isUserItem) break;
+            }
+            if (!(hitItem && hitItem.data && hitItem.data.isUserItem)) hitItem = null;
+        }
+
+        if (hitItem) {
+            const item = hitItem;
 
             if (event.modifiers.shift) {
                 if (MB.App.selectedItems.includes(item)) {

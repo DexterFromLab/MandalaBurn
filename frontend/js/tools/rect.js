@@ -72,8 +72,22 @@
             strokeWidth: 0.5,
             fillColor: null
         });
-        rect.data = { isUserItem: true };
+        rect.data = {
+            isUserItem: true,
+            shapeType: 'rect',
+            shapeParams: { width: rect.bounds.width, height: rect.bounds.height }
+        };
     };
+
+    // Register parametric builder
+    MB.Parametric.registerBuilder('rect', function(params) {
+        const w = params.width;
+        const h = params.height;
+        return new paper.Path.Rectangle({
+            from: [-w / 2, -h / 2],
+            to: [w / 2, h / 2]
+        });
+    });
 
     MB.App.registerTool('rect', {
         activate() { tool.activate(); },

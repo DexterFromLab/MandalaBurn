@@ -3,12 +3,13 @@ window.MB = window.MB || {};
 
 MB.App = {
     activeTool: null,
+    _transformMode: 'move',
     tools: {},
     selectedItems: [],
     clipboard: null,
 
     // Tools that have an options panel
-    _toolsWithOptions: ['select', 'pen', 'ruler', 'polygon', 'node-edit'],
+    _toolsWithOptions: ['select', 'pen', 'ruler', 'polygon', 'node-edit', 'text'],
 
     // Default layer colors (LightBurn style)
     layerColors: [
@@ -28,11 +29,28 @@ MB.App = {
         MB.BooleanOps.init();
         MB.Machine.init();
         MB.ProjectIO.init();
+        MB.FontManager.init();
 
         this.initMenus();
         this.initToolOptions();
         this.initKeyboard();
         this.initCollapsiblePanels();
+        this._initContextMenu();
+
+        // Track transform mode for toolbar button highlights
+        this.on('transform-mode-changed', (mode) => {
+            this._transformMode = mode;
+            document.querySelectorAll('.tool-btn[data-transform-mode]').forEach(btn => {
+                btn.classList.toggle('active', this.activeTool === 'select' &&
+                    btn.dataset.transformMode === mode);
+            });
+            // Also update sub-options visibility
+            const scaleOpts = document.getElementById('scale-opts');
+            const rotateOpts = document.getElementById('rotate-opts');
+            if (scaleOpts) scaleOpts.classList.toggle('hidden', mode !== 'scale');
+            if (rotateOpts) rotateOpts.classList.toggle('hidden', mode !== 'rotate');
+        });
+
         this.setTool('select');
     },
 
@@ -64,7 +82,13 @@ MB.App = {
         }
         // Update toolbar UI
         document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.tool === name);
+            if (btn.dataset.transformMode) {
+                // Transform buttons: active only when select tool + matching mode
+                btn.classList.toggle('active', name === 'select' &&
+                    btn.dataset.transformMode === this._transformMode);
+            } else {
+                btn.classList.toggle('active', btn.dataset.tool === name && !btn.dataset.transformMode);
+            }
         });
         // Update tool options panel
         this._updateToolOptions(name);
@@ -226,7 +250,17 @@ MB.App = {
             const btn = e.target.closest('.tool-btn[data-action]');
             if (btn) this.handleAction(btn.dataset.action);
             const toolBtn = e.target.closest('.tool-btn[data-tool]');
-            if (toolBtn) this.setTool(toolBtn.dataset.tool);
+            if (toolBtn) {
+                this.setTool(toolBtn.dataset.tool);
+                // If transform mode button, also set the mode
+                if (toolBtn.dataset.transformMode) {
+                    const mode = toolBtn.dataset.transformMode;
+                    document.querySelectorAll('.to-btn[data-mode]').forEach(b => b.classList.remove('active'));
+                    const modeBtn = document.querySelector(`.to-btn[data-mode="${mode}"]`);
+                    if (modeBtn) modeBtn.classList.add('active');
+                    this.emit('transform-mode-changed', mode);
+                }
+            }
         });
     },
 
@@ -236,6 +270,8 @@ MB.App = {
             case 'redo': MB.History.redo(); break;
             case 'select-all': this.selectAll(); break;
             case 'delete-selected': this.deleteSelected(); break;
+            case 'group-selected': this.groupSelected(); break;
+            case 'ungroup-selected': this.ungroupSelected(); break;
             case 'bool-unite': MB.BooleanOps.unite(); break;
             case 'bool-subtract': MB.BooleanOps.subtract(); break;
             case 'bool-intersect': MB.BooleanOps.intersect(); break;
@@ -276,6 +312,118 @@ MB.App = {
         this.select(items);
     },
 
+    // --- Group / Ungroup ---
+    groupSelected() {
+        const items = this.selectedItems;
+        if (items.length < 2) return;
+        MB.History.snapshot();
+        const group = new paper.Group(items);
+        group.data = { isUserItem: true };
+        this.select(group);
+        document.getElementById('status-info').textContent = 'Grouped ' + items.length + ' items';
+    },
+
+    ungroupSelected() {
+        const items = this.selectedItems;
+        if (items.length !== 1 || !(items[0] instanceof paper.Group)) return;
+        MB.History.snapshot();
+        const group = items[0];
+        const children = group.children.slice();
+        const parent = group.parent;
+        children.forEach(child => {
+            child.data = child.data || {};
+            child.data.isUserItem = true;
+            parent.addChild(child);
+        });
+        group.remove();
+        this.select(children);
+        document.getElementById('status-info').textContent = 'Ungrouped ' + children.length + ' items';
+    },
+
+    // --- Canvas Context Menu ---
+    showCanvasContextMenu(clientX, clientY, event) {
+        const menu = document.getElementById('canvas-context-menu');
+        if (!menu) return;
+
+        // Hit-test at click point to auto-select
+        const canvas = document.getElementById('main-canvas');
+        const rect = canvas.getBoundingClientRect();
+        const viewPt = new paper.Point(clientX - rect.left, clientY - rect.top);
+        const projectPt = paper.view.viewToProject(viewPt);
+
+        const hit = paper.project.hitTest(projectPt, {
+            fill: true, stroke: true, segments: true, tolerance: 8 / paper.view.zoom
+        });
+        if (hit && hit.item) {
+            let target = hit.item;
+            while (target.parent && target.parent !== target.layer &&
+                   !(target.data && target.data.isUserItem)) {
+                target = target.parent;
+            }
+            if (target.data && target.data.isUserItem && !this.selectedItems.includes(target)) {
+                this.select(target);
+            }
+        }
+
+        // Enable/disable buttons based on selection
+        const items = this.selectedItems;
+        const groupBtn = menu.querySelector('[data-action="group"]');
+        const ungroupBtn = menu.querySelector('[data-action="ungroup"]');
+        const flattenBtn = menu.querySelector('[data-action="flatten-to-path"]');
+        const deleteBtn = menu.querySelector('[data-action="delete-selected"]');
+
+        if (groupBtn) groupBtn.disabled = items.length < 2;
+        if (ungroupBtn) ungroupBtn.disabled = !(items.length === 1 && items[0] instanceof paper.Group);
+        if (flattenBtn) flattenBtn.disabled = !(items.length === 1 && MB.Parametric && MB.Parametric.isParametric(items[0]));
+        if (deleteBtn) deleteBtn.disabled = items.length === 0;
+
+        // Position menu
+        menu.style.left = clientX + 'px';
+        menu.style.top = clientY + 'px';
+        menu.classList.remove('hidden');
+
+        // Prevent going off-screen
+        requestAnimationFrame(() => {
+            const mr = menu.getBoundingClientRect();
+            if (mr.right > window.innerWidth) menu.style.left = (clientX - mr.width) + 'px';
+            if (mr.bottom > window.innerHeight) menu.style.top = (clientY - mr.height) + 'px';
+        });
+
+        // Close handler
+        const close = () => {
+            menu.classList.add('hidden');
+            document.removeEventListener('click', close);
+            document.removeEventListener('contextmenu', close);
+        };
+        setTimeout(() => {
+            document.addEventListener('click', close);
+            document.addEventListener('contextmenu', close);
+        }, 0);
+    },
+
+    _initContextMenu() {
+        const menu = document.getElementById('canvas-context-menu');
+        if (!menu) return;
+        menu.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-action]');
+            if (!btn || btn.disabled) return;
+            const action = btn.dataset.action;
+            switch (action) {
+                case 'group': this.groupSelected(); break;
+                case 'ungroup': this.ungroupSelected(); break;
+                case 'flatten-to-path':
+                    if (this.selectedItems.length === 1 && MB.Parametric.isParametric(this.selectedItems[0])) {
+                        MB.History.snapshot();
+                        MB.Parametric.flatten(this.selectedItems[0]);
+                        this.emit('selection-changed', this.selectedItems);
+                    }
+                    break;
+                case 'delete-selected': this.deleteSelected(); break;
+            }
+            menu.classList.add('hidden');
+        });
+    },
+
     // --- Keyboard ---
     initKeyboard() {
         document.addEventListener('keydown', (e) => {
@@ -289,6 +437,8 @@ MB.App = {
             if (ctrl && e.key === 'z') { e.preventDefault(); MB.History.undo(); }
             else if (ctrl && e.key === 'Z') { e.preventDefault(); MB.History.redo(); }
             else if (ctrl && e.key === 'a') { e.preventDefault(); this.selectAll(); }
+            else if (ctrl && shift && (e.key === 'g' || e.key === 'G')) { e.preventDefault(); this.ungroupSelected(); }
+            else if (ctrl && (e.key === 'g' || e.key === 'G')) { e.preventDefault(); this.groupSelected(); }
             // Single-key shortcuts (only when Ctrl/Cmd is NOT held)
             else if (!ctrl && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); this.deleteSelected(); }
             else if (!ctrl && (e.key === 'v' || e.key === 'V')) { this.setTool('select'); }
@@ -299,22 +449,27 @@ MB.App = {
             else if (!ctrl && (e.key === 'q' || e.key === 'Q')) { this.setTool('polygon'); }
             else if (!ctrl && (e.key === 'n' || e.key === 'N')) { this.setTool('node-edit'); }
             else if (!ctrl && (e.key === 'm' || e.key === 'M')) { this.setTool('ruler'); }
+            else if (!ctrl && (e.key === 't' || e.key === 'T')) { this.setTool('text'); }
             else if (!ctrl && (e.key === 'g' || e.key === 'G')) { MB.GridSnap.toggleGrid(); }
             else if (!ctrl && (e.key === 's' || e.key === 'S') && this.activeTool !== 'node-edit') { MB.GridSnap.toggleSnap(); }
-            // Transform mode shortcuts (1/2/3) when select tool is active
-            else if (!ctrl && this.activeTool === 'select' && e.key === '1') {
+            // Transform mode shortcuts (1/2/3) — work from any tool
+            else if (!ctrl && e.key === '1') {
+                this.setTool('select');
                 document.querySelector('.to-btn[data-mode="move"]')?.click();
             }
-            else if (!ctrl && this.activeTool === 'select' && e.key === '2') {
+            else if (!ctrl && e.key === '2') {
+                this.setTool('select');
                 document.querySelector('.to-btn[data-mode="scale"]')?.click();
             }
-            else if (!ctrl && this.activeTool === 'select' && e.key === '3') {
+            else if (!ctrl && e.key === '3') {
+                this.setTool('select');
                 document.querySelector('.to-btn[data-mode="rotate"]')?.click();
             }
             else if (e.key === 'Escape') {
-                this.clearSelection();
                 if (this.tools[this.activeTool] && this.tools[this.activeTool].cancel) {
                     this.tools[this.activeTool].cancel();
+                } else {
+                    this.clearSelection();
                 }
             }
         });

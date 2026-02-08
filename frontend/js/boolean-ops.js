@@ -17,6 +17,8 @@ MB.BooleanOps = {
             document.getElementById('status-info').textContent = 'Selected objects must be paths';
             return null;
         }
+        // Flatten parametric shapes before boolean operations
+        if (MB.Parametric) MB.Parametric.flattenAll(paths);
         return paths;
     },
 

@@ -56,9 +56,170 @@ MB.Properties = {
             }
         });
 
+        // Parametric flatten button
+        const flattenBtn = document.getElementById('param-flatten-btn');
+        if (flattenBtn) {
+            flattenBtn.addEventListener('click', () => {
+                const item = MB.App.selectedItems[0];
+                if (item && MB.Parametric.isParametric(item)) {
+                    MB.History.snapshot();
+                    MB.Parametric.flatten(item);
+                    MB.App.emit('selection-changed', MB.App.selectedItems);
+                }
+            });
+        }
+
+        // Parametric rect inputs
+        this._wireParamInput('param-rect-w', (item, val) => {
+            item.data.shapeParams.width = val;
+        });
+        this._wireParamInput('param-rect-h', (item, val) => {
+            item.data.shapeParams.height = val;
+        });
+
+        // Parametric ellipse inputs
+        this._wireParamInput('param-ellipse-rx', (item, val) => {
+            item.data.shapeParams.radiusX = val;
+        });
+        this._wireParamInput('param-ellipse-ry', (item, val) => {
+            item.data.shapeParams.radiusY = val;
+        });
+
+        // Parametric polygon inputs
+        this._wireParamInput('param-poly-sides', (item, val) => {
+            item.data.shapeParams.sides = Math.round(val);
+        });
+        this._wireParamInput('param-poly-radius', (item, val) => {
+            item.data.shapeParams.radius = val;
+        });
+
+        const polyStarCb = document.getElementById('param-poly-star');
+        if (polyStarCb) {
+            polyStarCb.addEventListener('change', () => {
+                const item = MB.App.selectedItems[0];
+                if (!item || !MB.Parametric.isParametric(item)) return;
+                MB.History.snapshot();
+                item.data.shapeParams.isStar = polyStarCb.checked;
+                MB.Parametric.regenerate(item);
+                this.updateObjectPanel(MB.App.selectedItems);
+            });
+        }
+
+        const polyRatio = document.getElementById('param-poly-ratio');
+        if (polyRatio) {
+            polyRatio.addEventListener('input', () => {
+                const item = MB.App.selectedItems[0];
+                if (!item || !MB.Parametric.isParametric(item)) return;
+                const val = parseFloat(polyRatio.value);
+                const ratioVal = document.getElementById('param-poly-ratio-val');
+                if (ratioVal) ratioVal.textContent = val.toFixed(2);
+                item.data.shapeParams.innerRatio = val;
+                MB.Parametric.regenerate(item);
+                paper.view.update();
+            });
+        }
+
+        // Parametric text inputs
+        this._wireParamTextInput('param-text-content', (item, val) => {
+            item.data.shapeParams.text = val;
+        });
+        this._wireParamSelect('param-text-font', (item, val) => {
+            item.data.shapeParams.fontName = val;
+        });
+        this._wireParamInput('param-text-size', (item, val) => {
+            item.data.shapeParams.fontSize = val;
+        });
+        this._wireParamInput('param-text-spacing', (item, val) => {
+            item.data.shapeParams.spacing = val;
+        });
+        this._wireParamInput('param-text-line-h', (item, val) => {
+            item.data.shapeParams.lineHeight = val;
+        });
+
+        const textUniteCb = document.getElementById('param-text-unite');
+        if (textUniteCb) {
+            textUniteCb.addEventListener('change', () => {
+                const item = MB.App.selectedItems[0];
+                if (!item || !MB.Parametric.isParametric(item)) return;
+                MB.History.snapshot();
+                item.data.shapeParams.unite = textUniteCb.checked;
+                MB.Parametric.regenerate(item);
+                paper.view.update();
+            });
+        }
+
+        // Arc text slider (live preview)
+        const arcSlider = document.getElementById('param-text-arc');
+        if (arcSlider) {
+            let arcSnapped = false;
+            arcSlider.addEventListener('input', () => {
+                const item = MB.App.selectedItems[0];
+                if (!item || !MB.Parametric.isParametric(item)) return;
+                const val = parseInt(arcSlider.value);
+                const arcLabel = document.getElementById('param-text-arc-val');
+                if (arcLabel) arcLabel.textContent = val + '\u00B0';
+                if (!arcSnapped) { MB.History.snapshot(); arcSnapped = true; }
+                item.data.shapeParams.arcAngle = val;
+                MB.Parametric.regenerate(item);
+                paper.view.update();
+            });
+            arcSlider.addEventListener('change', () => { arcSnapped = false; });
+        }
+
         // Listen for selection changes
         MB.App.on('selection-changed', (items) => this.updateObjectPanel(items));
         MB.App.on('active-layer-changed', (layer) => this.updateLaserPanel(layer));
+    },
+
+    _wireParamInput(id, apply) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        let snapped = false;
+        // Live preview on input (not just on Enter/blur)
+        el.addEventListener('input', () => {
+            const item = MB.App.selectedItems[0];
+            if (!item || !MB.Parametric.isParametric(item)) return;
+            const val = parseFloat(el.value);
+            if (isNaN(val)) return;
+            if (!snapped) { MB.History.snapshot(); snapped = true; }
+            apply(item, val);
+            MB.Parametric.regenerate(item);
+            paper.view.update();
+        });
+        el.addEventListener('change', () => { snapped = false; });
+    },
+
+    _wireParamTextInput(id, apply) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        let snapped = false;
+        let timer = null;
+        // Debounced live preview for text content (300ms)
+        el.addEventListener('input', () => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => {
+                const item = MB.App.selectedItems[0];
+                if (!item || !MB.Parametric.isParametric(item)) return;
+                if (!snapped) { MB.History.snapshot(); snapped = true; }
+                apply(item, el.value);
+                MB.Parametric.regenerate(item);
+                paper.view.update();
+            }, 300);
+        });
+        el.addEventListener('change', () => { snapped = false; });
+    },
+
+    _wireParamSelect(id, apply) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('change', () => {
+            const item = MB.App.selectedItems[0];
+            if (!item || !MB.Parametric.isParametric(item)) return;
+            MB.History.snapshot();
+            apply(item, el.value);
+            MB.Parametric.regenerate(item);
+            paper.view.update();
+        });
     },
 
     updateObjectPanel(items) {
@@ -71,10 +232,13 @@ MB.Properties = {
         const lengthRow = document.getElementById('prop-length-row');
         const lengthVal = document.getElementById('prop-length');
 
+        const paramProps = document.getElementById('param-props');
+
         if (items.length === 0) {
             propX.value = ''; propY.value = ''; propW.value = ''; propH.value = ''; propR.value = '';
             propX.disabled = propY.disabled = propW.disabled = propH.disabled = propR.disabled = true;
             if (lengthRow) lengthRow.style.display = 'none';
+            if (paramProps) paramProps.classList.add('hidden');
         } else if (items.length === 1) {
             const item = items[0];
             const bounds = item.bounds;
@@ -99,7 +263,17 @@ MB.Properties = {
                     lengthRow.style.display = 'none';
                 }
             }
+
+            // Parametric properties
+            this._updateParamPanel(item, paramProps);
+
+            // Auto-expand Object panel when parametric item is selected
+            if (MB.Parametric && MB.Parametric.isParametric(item)) {
+                const objPanel = document.getElementById('object-properties');
+                if (objPanel) objPanel.classList.remove('collapsed');
+            }
         } else {
+            if (paramProps) paramProps.classList.add('hidden');
             let combinedBounds = null;
             items.forEach(item => {
                 combinedBounds = combinedBounds ? combinedBounds.unite(item.bounds) : item.bounds.clone();
@@ -153,6 +327,10 @@ MB.Properties = {
                     item.rotation = value;
                     break;
             }
+            // Sync parametric params after scaling
+            if ((propId === 'prop-w' || propId === 'prop-h') && MB.Parametric.isParametric(item)) {
+                this._syncParamsFromBounds(item);
+            }
         } else {
             let combinedBounds = null;
             items.forEach(item => {
@@ -199,5 +377,119 @@ MB.Properties = {
         document.getElementById('laser-power-val').textContent = ls.power + '%';
         document.getElementById('laser-speed').value = ls.speed;
         document.getElementById('laser-passes').value = ls.passes;
+    },
+
+    _updateParamPanel(item, paramProps) {
+        if (!paramProps) return;
+
+        // Hide all param groups
+        paramProps.querySelectorAll('.param-group').forEach(g => g.classList.add('hidden'));
+
+        if (!MB.Parametric.isParametric(item)) {
+            paramProps.classList.add('hidden');
+            return;
+        }
+
+        paramProps.classList.remove('hidden');
+        const type = item.data.shapeType;
+        const params = item.data.shapeParams;
+        const typeLabel = document.getElementById('param-type-label');
+
+        // Type label
+        const typeNames = { rect: 'Rectangle', ellipse: 'Ellipse', polygon: 'Polygon', text: 'Text' };
+        if (typeLabel) typeLabel.textContent = typeNames[type] || type;
+
+        // Show the matching group
+        const group = document.getElementById('param-' + type);
+        if (group) group.classList.remove('hidden');
+
+        // Populate fields
+        switch (type) {
+            case 'rect':
+                this._setVal('param-rect-w', params.width);
+                this._setVal('param-rect-h', params.height);
+                break;
+            case 'ellipse':
+                this._setVal('param-ellipse-rx', params.radiusX);
+                this._setVal('param-ellipse-ry', params.radiusY);
+                break;
+            case 'polygon':
+                this._setVal('param-poly-sides', params.sides);
+                this._setVal('param-poly-radius', params.radius);
+                const starCb = document.getElementById('param-poly-star');
+                if (starCb) starCb.checked = !!params.isStar;
+                const ratioSlider = document.getElementById('param-poly-ratio');
+                const ratioRow = document.getElementById('param-poly-ratio-row');
+                if (ratioSlider) ratioSlider.value = params.innerRatio || 0.5;
+                const ratioVal = document.getElementById('param-poly-ratio-val');
+                if (ratioVal) ratioVal.textContent = (params.innerRatio || 0.5).toFixed(2);
+                if (ratioRow) ratioRow.style.display = params.isStar ? '' : 'none';
+                break;
+            case 'text':
+                this._setVal('param-text-content', params.text, true);
+                this._setVal('param-text-size', params.fontSize);
+                this._setVal('param-text-spacing', params.spacing);
+                this._setVal('param-text-line-h', params.lineHeight);
+                const uniteCb = document.getElementById('param-text-unite');
+                if (uniteCb) uniteCb.checked = params.unite !== false;
+                // Arc angle
+                const arcS = document.getElementById('param-text-arc');
+                const arcV = document.getElementById('param-text-arc-val');
+                const arcVal = params.arcAngle || 0;
+                if (arcS) arcS.value = arcVal;
+                if (arcV) arcV.textContent = arcVal + '\u00B0';
+                // Populate font select
+                this._populateParamFontSelect(params.fontName);
+                break;
+        }
+    },
+
+    _setVal(id, val, isText) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (isText) {
+            el.value = val || '';
+        } else {
+            el.value = typeof val === 'number' ? val.toFixed(1) : (val || '');
+        }
+    },
+
+    _syncParamsFromBounds(item) {
+        if (!MB.Parametric.isParametric(item)) return;
+        const type = item.data.shapeType;
+        const params = item.data.shapeParams;
+        const b = item.bounds;
+        switch (type) {
+            case 'rect':
+                params.width = b.width;
+                params.height = b.height;
+                break;
+            case 'ellipse':
+                params.radiusX = b.width / 2;
+                params.radiusY = b.height / 2;
+                break;
+            case 'polygon':
+                params.radius = Math.max(b.width, b.height) / 2;
+                break;
+            case 'text':
+                params.fontSize = params.fontSize * (b.width / (item._prevWidth || b.width));
+                break;
+        }
+    },
+
+    _populateParamFontSelect(currentFont) {
+        const sel = document.getElementById('param-text-font');
+        if (!sel) return;
+        const names = MB.FontManager.getFontNames();
+        sel.innerHTML = '';
+        names.forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            sel.appendChild(opt);
+        });
+        if (currentFont && names.includes(currentFont)) {
+            sel.value = currentFont;
+        }
     }
 };

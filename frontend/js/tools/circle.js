@@ -71,8 +71,21 @@
             strokeWidth: 0.5,
             fillColor: null
         });
-        ellipse.data = { isUserItem: true };
+        ellipse.data = {
+            isUserItem: true,
+            shapeType: 'ellipse',
+            shapeParams: { radiusX: rect.width / 2, radiusY: rect.height / 2 }
+        };
     };
+
+    // Register parametric builder
+    MB.Parametric.registerBuilder('ellipse', function(params) {
+        const rx = params.radiusX;
+        const ry = params.radiusY;
+        return new paper.Path.Ellipse({
+            rectangle: new paper.Rectangle(-rx, -ry, rx * 2, ry * 2)
+        });
+    });
 
     MB.App.registerTool('circle', {
         activate() { tool.activate(); },

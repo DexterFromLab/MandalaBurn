@@ -81,15 +81,41 @@
             const type = inferNodeType(seg);
             const isSelected = selectedSegments.has(seg);
 
-            // Draw handles
+            // Draw handles (including zero-length phantom handles for selected nodes)
             ['handleIn', 'handleOut'].forEach(hType => {
                 const h = seg[hType];
-                if (!h || h.length < 0.01) return;
-                const handlePt = seg.point.add(h);
+                const isZeroLength = !h || h.length < 0.01;
+                const isNodeSelected = selectedSegments.has(seg);
+
+                // Skip zero-length handles unless node is selected
+                if (isZeroLength && !isNodeSelected) return;
+
+                let handlePt;
+                if (isZeroLength) {
+                    // Phantom handle: place at small offset toward adjacent segment
+                    const defaultOffset = 15 / z;
+                    let dir;
+                    if (hType === 'handleOut' && idx < path.segments.length - 1) {
+                        dir = path.segments[idx + 1].point.subtract(seg.point);
+                        dir = dir.length > 0 ? dir.normalize(defaultOffset) : new paper.Point(defaultOffset, 0);
+                    } else if (hType === 'handleIn' && idx > 0) {
+                        dir = path.segments[idx - 1].point.subtract(seg.point);
+                        dir = dir.length > 0 ? dir.normalize(defaultOffset) : new paper.Point(-defaultOffset, 0);
+                    } else {
+                        dir = hType === 'handleOut'
+                            ? new paper.Point(defaultOffset, 0)
+                            : new paper.Point(-defaultOffset, 0);
+                    }
+                    handlePt = seg.point.add(dir);
+                } else {
+                    handlePt = seg.point.add(h);
+                }
 
                 const stem = new paper.Path.Line({
                     from: seg.point, to: handlePt,
-                    strokeColor: '#6c8fef', strokeWidth: 1 / z
+                    strokeColor: isZeroLength ? '#ef6c6c' : '#6c8fef',
+                    strokeWidth: 1 / z,
+                    dashArray: isZeroLength ? [2/z, 2/z] : []
                 });
                 stem.data = { isNodeMarker: true };
                 nodeMarkers.push(stem);
@@ -98,7 +124,7 @@
                 const dot = new paper.Path.Circle({
                     center: handlePt,
                     radius: isActive ? hr * 1.4 : hr,
-                    fillColor: isActive ? '#ffffff' : '#6c8fef',
+                    fillColor: isActive ? '#ffffff' : (isZeroLength ? '#ef6c6c' : '#6c8fef'),
                     strokeColor: isActive ? '#6c8fef' : '#ffffff',
                     strokeWidth: 0.5 / z
                 });
@@ -182,9 +208,8 @@
         for (let i = nodeMarkers.length - 1; i >= 0; i--) {
             const m = nodeMarkers[i];
             if (m.data && m.data.handleType && selectedPath) {
-                const seg = selectedPath.segments[m.data.segmentIndex];
-                const handlePt = seg.point.add(seg[m.data.handleType]);
-                if (point.getDistance(handlePt) < tolerance) {
+                // Use marker visual position (works for both real and phantom handles)
+                if (point.getDistance(m.position) < tolerance) {
                     return { segmentIndex: m.data.segmentIndex, handleType: m.data.handleType };
                 }
             }
@@ -387,13 +412,18 @@
 
         if (selectedHandle && activeHandleSeg) {
             const delta = point.subtract(activeHandleSeg.point);
-            const type = inferNodeType(activeHandleSeg);
+            const wasCorner = inferNodeType(activeHandleSeg) === 'corner';
             activeHandleSeg[selectedHandle] = delta;
 
             if (event.modifiers.alt) {
+                // Alt = cusp (independent handles)
                 if (!activeHandleSeg.data) activeHandleSeg.data = {};
                 activeHandleSeg.data.nodeType = 'cusp';
-            } else if (type === 'smooth') {
+            } else if (wasCorner && delta.length > 0.1) {
+                // Pulled from zero-length: mark as cusp
+                if (!activeHandleSeg.data) activeHandleSeg.data = {};
+                activeHandleSeg.data.nodeType = 'cusp';
+            } else if (inferNodeType(activeHandleSeg) === 'smooth') {
                 const opposite = selectedHandle === 'handleIn' ? 'handleOut' : 'handleIn';
                 activeHandleSeg[opposite] = delta.negate();
             }
@@ -700,6 +730,11 @@
             MB.App.on('view-changed', onViewChanged);
             if (MB.App.selectedItems.length === 1 && MB.App.selectedItems[0] instanceof paper.Path) {
                 selectedPath = MB.App.selectedItems[0];
+                // Auto-flatten parametric shapes when entering node edit
+                if (MB.Parametric && MB.Parametric.isParametric(selectedPath)) {
+                    MB.Parametric.flatten(selectedPath);
+                    MB.App.emit('selection-changed', MB.App.selectedItems);
+                }
                 initSegmentTypes(selectedPath);
                 drawNodes(selectedPath);
             }
@@ -717,13 +752,23 @@
             document.getElementById('main-canvas').style.cursor = '';
         },
         cancel() {
-            clearMarkers();
-            selectedPath = null;
-            selectedSegments.clear();
-            selectedHandle = null;
-            activeHandleSeg = null;
-            if (rubberBand) { rubberBand.remove(); rubberBand = null; }
-            updateButtons();
+            if (selectedSegments.size > 0) {
+                // First Escape: deselect nodes but stay in node-edit
+                selectedSegments.clear();
+                selectedHandle = null;
+                activeHandleSeg = null;
+                if (selectedPath) drawNodes(selectedPath);
+                updateButtons();
+            } else {
+                // Second Escape: return to select tool
+                clearMarkers();
+                selectedPath = null;
+                selectedHandle = null;
+                activeHandleSeg = null;
+                if (rubberBand) { rubberBand.remove(); rubberBand = null; }
+                MB.App.clearSelection();
+                MB.App.setTool('select');
+            }
         }
     });
 })();

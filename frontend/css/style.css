@@ -150,6 +150,17 @@ body {
     margin: 4px 0;
 }
 
+.toolbar-label {
+    font-size: 8px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+    padding: 2px 0 0;
+    line-height: 1;
+    width: 100%;
+}
+
 /* Tool Options Panel (expandable left sidebar) */
 #tool-options {
     width: 140px;
@@ -984,6 +995,37 @@ input[type="color"]::-webkit-color-swatch { border: 1px solid var(--border); bor
     color: var(--text-muted);
     font-style: italic;
 }
+
+/* ===================== Canvas Context Menu ===================== */
+.canvas-context-menu {
+    position: fixed;
+    z-index: 2000;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    padding: 4px 0;
+}
+.canvas-context-menu.hidden { display: none; }
+.canvas-context-menu button {
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    padding: 6px 16px;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+}
+.canvas-context-menu button:hover { background: var(--accent); color: white; }
+.canvas-context-menu button:disabled { color: var(--text-muted); cursor: default; }
+.canvas-context-menu button:disabled:hover { background: none; color: var(--text-muted); }
+.canvas-context-menu .shortcut { color: var(--text-muted); margin-left: 16px; font-size: 11px; }
+.canvas-context-menu button:hover .shortcut { color: rgba(255,255,255,0.7); }
 
 /* ===================== Laser position marker on canvas ===================== */
 .laser-crosshair {

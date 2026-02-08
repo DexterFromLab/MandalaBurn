@@ -29,7 +29,10 @@ MB.Canvas = {
         container.addEventListener('mousedown', (e) => this.onMouseDown(e));
         container.addEventListener('mousemove', (e) => this.onMouseMove(e));
         container.addEventListener('mouseup', (e) => this.onMouseUp(e));
-        container.addEventListener('contextmenu', (e) => e.preventDefault());
+        container.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            MB.App.showCanvasContextMenu(e.clientX, e.clientY, e);
+        });
 
         // Space key for temporary pan
         document.addEventListener('keydown', (e) => {

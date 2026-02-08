@@ -101,6 +101,11 @@ MB.ObjectsList = {
     },
 
     _getTypeName(item) {
+        // Use parametric shapeType if available
+        if (item.data && item.data.shapeType) {
+            const names = { rect: 'Rect', ellipse: 'Ellipse', polygon: 'Polygon', text: 'Text' };
+            return names[item.data.shapeType] || item.data.shapeType;
+        }
         if (item instanceof paper.CompoundPath) return 'Compound';
         if (item instanceof paper.Path) {
             if (item.closed) {
@@ -117,6 +122,11 @@ MB.ObjectsList = {
     },
 
     _getIcon(item) {
+        // Use parametric shapeType for icons
+        if (item.data && item.data.shapeType) {
+            const icons = { rect: '\u25AD', ellipse: '\u25CB', polygon: '\u2B23', text: 'T' };
+            return icons[item.data.shapeType] || '\u25A1';
+        }
         if (item instanceof paper.CompoundPath) return '\u29C9'; // ⧉
         if (item instanceof paper.Path) {
             if (item.closed) {

@@ -97,8 +97,20 @@
         poly.strokeColor = layer.color;
         poly.strokeWidth = 0.5;
         poly.fillColor = null;
-        poly.data = { isUserItem: true };
+        poly.data = {
+            isUserItem: true,
+            shapeType: 'polygon',
+            shapeParams: { sides: sides, isStar: star, innerRatio: ratio, radius: radius }
+        };
     };
+
+    // Register parametric builder (builds centered at origin)
+    MB.Parametric.registerBuilder('polygon', function(params) {
+        return createPolygon(
+            new paper.Point(0, 0),
+            params.radius, params.sides, params.isStar, params.innerRatio
+        );
+    });
 
     MB.App.registerTool('polygon', {
         activate() { tool.activate(); },

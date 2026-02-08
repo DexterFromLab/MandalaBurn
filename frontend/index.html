@@ -44,6 +44,9 @@
             <button data-action="select-all">Select All <span class="shortcut">Ctrl+A</span></button>
             <button data-action="delete-selected">Delete <span class="shortcut">Del</span></button>
             <div class="menu-separator"></div>
+            <button data-action="group-selected">Group <span class="shortcut">Ctrl+G</span></button>
+            <button data-action="ungroup-selected">Ungroup <span class="shortcut">Ctrl+Shift+G</span></button>
+            <div class="menu-separator"></div>
             <button data-action="split-to-layer">Split Selection to New Layer</button>
             <button data-action="move-to-layer">Move Selection to Layer...</button>
             <button data-action="merge-layers">Merge Layer Down</button>
@@ -85,14 +88,22 @@
     <div id="main-container">
         <!-- Left Toolbar -->
         <div id="toolbar">
+            <!-- Select section -->
+            <span class="toolbar-label">Select</span>
             <button class="tool-btn active" data-tool="select" title="Select (V)">
                 <svg viewBox="0 0 24 24"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51z"/></svg>
             </button>
+            <button class="tool-btn" data-tool="node-edit" title="Node Edit (N)">
+                <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="18" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="8" y1="8" x2="16" y2="16" stroke="currentColor" stroke-width="1.5"/></svg>
+            </button>
+            <div class="toolbar-separator"></div>
+            <!-- Draw section -->
+            <span class="toolbar-label">Draw</span>
             <button class="tool-btn" data-tool="line" title="Line (L)">
                 <svg viewBox="0 0 24 24"><line x1="5" y1="19" x2="19" y2="5" stroke="currentColor" stroke-width="2"/></svg>
             </button>
-            <button class="tool-btn" data-tool="pen" title="Pen (P)">
-                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            <button class="tool-btn" data-tool="pen" title="Pen / Bezier (P)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 18C3 18 8 4 12 12S21 6 21 6" stroke-linecap="round"/><circle cx="3" cy="18" r="2" fill="currentColor" stroke="none"/><circle cx="21" cy="6" r="2" fill="currentColor" stroke="none"/><line x1="3" y1="18" x2="8" y2="4" stroke-dasharray="2,2" stroke-width="1"/><circle cx="8" cy="4" r="1.5" fill="none"/></svg>
             </button>
             <button class="tool-btn" data-tool="rect" title="Rectangle (R)">
                 <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"/></svg>
@@ -103,14 +114,30 @@
             <button class="tool-btn" data-tool="polygon" title="Polygon/Star (Q)">
                 <svg viewBox="0 0 24 24"><polygon points="12,2 15,9 22,9 17,14 19,21 12,17 5,21 7,14 2,9 9,9" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
             </button>
-            <button class="tool-btn" data-tool="node-edit" title="Node Edit (N)">
-                <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="18" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="8" y1="8" x2="16" y2="16" stroke="currentColor" stroke-width="1.5"/></svg>
+            <button class="tool-btn" data-tool="text" title="Text (T)">
+                <svg viewBox="0 0 24 24"><text x="5" y="19" font-size="18" font-weight="bold" fill="currentColor" font-family="sans-serif">T</text></svg>
             </button>
+            <div class="toolbar-separator"></div>
+            <!-- Transform section -->
+            <span class="toolbar-label">Xform</span>
+            <button class="tool-btn" data-tool="select" data-transform-mode="move" title="Move (1)">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 3h-2v4h4v-2l3 3-3 3v-2h-4v4h2l-3 3-3-3h2v-4H7v2l-3-3 3-3v2h4V5H9l3-3z"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="select" data-transform-mode="scale" title="Scale (2)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/><path d="M14 10l-4-4M10 6h4v4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="tool-btn" data-tool="select" data-transform-mode="rotate" title="Rotate (3)">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+            </button>
+            <div class="toolbar-separator"></div>
+            <!-- Utility section -->
+            <span class="toolbar-label">Util</span>
             <button class="tool-btn" data-tool="ruler" title="Measure (M)">
                 <svg viewBox="0 0 24 24"><path d="M3 5h18v14H3V5zm2 2v10h14V7H5zm2 2h2v2H7V9zm4 0h2v2h-2V9zm4 0h2v2h-2V9zm-8 4h2v2H7v-2zm4 0h2v2h-2v-2z" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
             </button>
             <div class="toolbar-separator"></div>
-            <!-- Boolean ops toolbar buttons -->
+            <!-- Boolean ops section -->
+            <span class="toolbar-label">Bool</span>
             <button class="tool-btn" data-action="bool-unite" title="Unite">
                 <svg viewBox="0 0 24 24"><circle cx="9" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="15" cy="14" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
             </button>
@@ -233,6 +260,43 @@
                     <input type="range" id="star-inner-ratio" min="0.1" max="0.9" step="0.05" value="0.5" style="flex:1">
                 </div>
             </div>
+            <!-- Text tool options -->
+            <div class="tool-opts" data-tool="text">
+                <div class="tool-opts-title">Text</div>
+                <div class="prop-row">
+                    <textarea id="text-input" rows="3" placeholder="Type text here..." style="width:100%;resize:vertical;font-size:12px"></textarea>
+                </div>
+                <div class="prop-row">
+                    <label>Font</label>
+                    <select id="text-font" style="flex:1">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div class="prop-row">
+                    <label></label>
+                    <label class="to-btn" style="text-align:center;cursor:pointer;font-size:10px">
+                        Upload .ttf
+                        <input type="file" id="text-font-upload" accept=".ttf,.otf,.woff" style="display:none">
+                    </label>
+                </div>
+                <div class="prop-row">
+                    <label>Size</label>
+                    <input type="number" id="text-size" value="20" min="1" max="500" step="1" style="width:55px">
+                    <span class="unit-label">mm</span>
+                </div>
+                <div class="prop-row">
+                    <label>Spacing</label>
+                    <input type="number" id="text-spacing" value="0" min="-10" max="50" step="0.5" style="width:55px">
+                    <span class="unit-label">mm</span>
+                </div>
+                <div class="prop-row">
+                    <label>Line H</label>
+                    <input type="number" id="text-line-height" value="1.3" min="0.5" max="5" step="0.1" style="width:55px">
+                </div>
+                <div class="prop-row">
+                    <label><input type="checkbox" id="text-unite" checked> Unite overlaps</label>
+                </div>
+            </div>
         </div>
 
         <!-- Canvas Area with Edge Rulers -->
@@ -274,6 +338,78 @@
                     </div>
                     <div class="prop-row" id="prop-length-row" style="display:none">
                         <label>Len</label><span id="prop-length">&mdash;</span><span class="unit-label">mm</span>
+                    </div>
+
+                    <!-- Parametric shape properties -->
+                    <div id="param-props" class="hidden">
+                        <div class="prop-row" style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px">
+                            <span id="param-type-label" style="font-size:10px;color:var(--accent);text-transform:uppercase;flex:1">Shape</span>
+                            <button id="param-flatten-btn" class="to-btn" style="font-size:10px" title="Convert to plain path">&rarr; Path</button>
+                        </div>
+
+                        <div id="param-rect" class="param-group hidden">
+                            <div class="prop-row">
+                                <label>Width</label><input type="number" id="param-rect-w" step="0.1" min="0.1" style="width:60px">
+                            </div>
+                            <div class="prop-row">
+                                <label>Height</label><input type="number" id="param-rect-h" step="0.1" min="0.1" style="width:60px">
+                            </div>
+                        </div>
+
+                        <div id="param-ellipse" class="param-group hidden">
+                            <div class="prop-row">
+                                <label>Radius X</label><input type="number" id="param-ellipse-rx" step="0.1" min="0.1" style="width:60px">
+                            </div>
+                            <div class="prop-row">
+                                <label>Radius Y</label><input type="number" id="param-ellipse-ry" step="0.1" min="0.1" style="width:60px">
+                            </div>
+                        </div>
+
+                        <div id="param-polygon" class="param-group hidden">
+                            <div class="prop-row">
+                                <label>Sides</label><input type="number" id="param-poly-sides" min="3" max="64" step="1" style="width:50px">
+                            </div>
+                            <div class="prop-row">
+                                <label>Radius</label><input type="number" id="param-poly-radius" step="0.1" min="0.1" style="width:60px">
+                            </div>
+                            <div class="prop-row">
+                                <label><input type="checkbox" id="param-poly-star"> Star</label>
+                            </div>
+                            <div class="prop-row" id="param-poly-ratio-row">
+                                <label>Inner</label>
+                                <input type="range" id="param-poly-ratio" min="0.1" max="0.9" step="0.05" value="0.5" style="flex:1">
+                                <span id="param-poly-ratio-val" style="width:30px;text-align:right;font-size:10px">0.50</span>
+                            </div>
+                        </div>
+
+                        <div id="param-text" class="param-group hidden">
+                            <div class="prop-row">
+                                <textarea id="param-text-content" rows="2" style="width:100%;resize:vertical;font-size:11px" placeholder="Text..."></textarea>
+                            </div>
+                            <div class="prop-row">
+                                <label>Font</label><select id="param-text-font" style="flex:1"></select>
+                            </div>
+                            <div class="prop-row">
+                                <label>Size</label><input type="number" id="param-text-size" min="1" max="500" step="1" style="width:55px">
+                            </div>
+                            <div class="prop-row">
+                                <label>Space</label><input type="number" id="param-text-spacing" min="-10" max="50" step="0.5" style="width:55px">
+                            </div>
+                            <div class="prop-row">
+                                <label>Line H</label><input type="number" id="param-text-line-h" min="0.5" max="5" step="0.1" style="width:55px">
+                            </div>
+                            <div class="prop-row">
+                                <label><input type="checkbox" id="param-text-unite" checked> Unite</label>
+                            </div>
+                            <div class="prop-row" style="margin-top:4px;border-top:1px solid var(--border);padding-top:4px">
+                                <span style="font-size:9px;color:var(--text-muted);text-transform:uppercase">Transform</span>
+                            </div>
+                            <div class="prop-row">
+                                <label>Arc</label>
+                                <input type="range" id="param-text-arc" min="-360" max="360" step="5" value="0" style="flex:1">
+                                <span id="param-text-arc-val" style="width:35px;text-align:right;font-size:10px">0&deg;</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -503,6 +639,16 @@
         <span id="status-info"></span>
     </div>
 
+    <!-- Canvas Context Menu -->
+    <div id="canvas-context-menu" class="canvas-context-menu hidden">
+        <button data-action="group">Group<span class="shortcut">Ctrl+G</span></button>
+        <button data-action="ungroup">Ungroup<span class="shortcut">Ctrl+Shift+G</span></button>
+        <div class="menu-separator"></div>
+        <button data-action="flatten-to-path">&rarr; Convert to Path</button>
+        <div class="menu-separator"></div>
+        <button data-action="delete-selected">Delete<span class="shortcut">Del</span></button>
+    </div>
+
     <!-- Machine Settings Dialog -->
     <div id="machine-settings-dialog" class="modal-overlay hidden">
         <div class="modal-box modal-wide">
@@ -601,6 +747,9 @@
     <input type="file" id="file-open-project" accept=".mandala,.json" style="display:none">
     <input type="file" id="file-import-svg" accept=".svg" style="display:none">
 
+    <!-- Libraries -->
+    <script src="/lib/opentype.min.js"></script>
+
     <!-- Application scripts -->
     <script src="/js/app.js"></script>
     <script src="/js/canvas.js"></script>
@@ -608,6 +757,7 @@
     <script src="/js/layers.js"></script>
     <script src="/js/properties.js"></script>
     <script src="/js/history.js"></script>
+    <script src="/js/parametric.js"></script>
     <script src="/js/tools/select.js"></script>
     <script src="/js/tools/line.js"></script>
     <script src="/js/tools/pen.js"></script>
@@ -621,5 +771,7 @@
     <script src="/js/boolean-ops.js"></script>
     <script src="/js/machine.js"></script>
     <script src="/js/project-io.js"></script>
+    <script src="/js/font-manager.js"></script>
+    <script src="/js/tools/text.js"></script>
 </body>
 </html>
