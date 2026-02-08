@@ -189,6 +189,14 @@ MB.Simulator = {
             this.simLayer.visible = true;
         }
 
+        // If paused at the very end, restart from beginning
+        if (this.state === 'paused' && this.simTime >= this.totalTime) {
+            this.simTime = 0;
+            this._trailIdx = 0;
+            this._clearSimLayer();
+            this.simLayer.visible = true;
+        }
+
         this.state = 'running';
         this._lastFrame = performance.now();
         this._rafId = requestAnimationFrame(ts => this._tick(ts));
@@ -238,8 +246,9 @@ MB.Simulator = {
             this.simTime = this.totalTime;
             this._drawUpTo(this.simTime);
             this._updateUI();
-            // Finished
-            this.state = 'idle';
+            // Finished — go to paused so trail stays visible & replay works
+            this.state = 'paused';
+            this._rafId = null;
             this._updateButtons();
             document.getElementById('status-info').textContent = 'Simulator: complete';
             return;
@@ -363,16 +372,29 @@ MB.Simulator = {
 
         // Progress bar click → seek
         document.getElementById('sim-progress').addEventListener('click', (e) => {
+            // If idle with no compiled job, compile first
+            if (this.state === 'idle') {
+                this.compile();
+                if (this.commands.length === 0) return;
+            }
             if (this.totalTime <= 0) return;
+
             const rect = e.currentTarget.getBoundingClientRect();
-            const pct = (e.clientX - rect.left) / rect.width;
+            const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
             this.simTime = pct * this.totalTime;
+
             // Rebuild trail up to new time
             this._clearSimLayer();
             this._trailIdx = 0;
             this.simLayer.visible = true;
             this._drawUpTo(this.simTime);
             this._updateUI();
+
+            // If was idle, transition to paused so controls work
+            if (this.state === 'idle') {
+                this.state = 'paused';
+                this._updateButtons();
+            }
         });
     },
 
