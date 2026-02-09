@@ -112,40 +112,16 @@ MB.Symmetry = {
             return c;
         };
 
-        // Collect mirror copies (sources for rotational step)
-        const mirrorCopies = [];
-
-        // Mirror H: flip across vertical axis (left-right)
-        if (sym.mirrorH) {
-            const mh = makeClone();
-            mh.translate(center.negate());
-            mh.rotate(-axisAngle, origin);
-            mh.scale(-1, 1, origin);
-            mh.rotate(axisAngle, origin);
-            mh.translate(center);
-            mirrorCopies.push(mh);
-        }
-
-        // Mirror V: flip across horizontal axis (top-bottom)
-        if (sym.mirrorV) {
-            const mv = makeClone();
-            mv.translate(center.negate());
-            mv.rotate(-axisAngle, origin);
-            mv.scale(1, -1, origin);
-            mv.rotate(axisAngle, origin);
-            mv.translate(center);
-            mirrorCopies.push(mv);
-        }
-
-        // Mirror H+V combined (180-degree point symmetry)
-        if (sym.mirrorH && sym.mirrorV) {
-            const mhv = makeClone();
-            mhv.translate(center.negate());
-            mhv.rotate(-axisAngle, origin);
-            mhv.scale(-1, -1, origin);
-            mhv.rotate(axisAngle, origin);
-            mhv.translate(center);
-            mirrorCopies.push(mhv);
+        // Single combined mirror copy (H, V, or H+V in one transform)
+        let mirrorCopy = null;
+        if (sym.mirrorH || sym.mirrorV) {
+            const mc = makeClone();
+            mc.translate(center.negate());
+            mc.rotate(-axisAngle, origin);
+            mc.scale(sym.mirrorH ? -1 : 1, sym.mirrorV ? -1 : 1, origin);
+            mc.rotate(axisAngle, origin);
+            mc.translate(center);
+            mirrorCopy = mc;
         }
 
         // Rotational copies
@@ -158,10 +134,10 @@ MB.Symmetry = {
                 rc.rotate(angleStep * i, center);
             }
 
-            // Rotate each mirror copy too
-            for (const src of mirrorCopies) {
+            // Rotate mirror copy too
+            if (mirrorCopy) {
                 for (let i = 1; i < sym.rotational; i++) {
-                    const rc = src.clone();
+                    const rc = mirrorCopy.clone();
                     rc.data = { isSymmetryCopy: true, symmetryOriginal: item };
                     rc.selected = false;
                     this._symmetryLayer.addChild(rc);
@@ -224,46 +200,20 @@ MB.Symmetry = {
 
             const newItems = [];
 
-            // Mirror H
-            if (sym.mirrorH) {
-                const mh = item.clone();
-                mh.data = { isUserItem: true };
-                mh.selected = false;
-                layer.addChild(mh);
-                mh.translate(center.negate());
-                mh.rotate(-axisAngle, origin);
-                mh.scale(-1, 1, origin);
-                mh.rotate(axisAngle, origin);
-                mh.translate(center);
-                newItems.push(mh);
-            }
-
-            // Mirror V
-            if (sym.mirrorV) {
-                const mv = item.clone();
-                mv.data = { isUserItem: true };
-                mv.selected = false;
-                layer.addChild(mv);
-                mv.translate(center.negate());
-                mv.rotate(-axisAngle, origin);
-                mv.scale(1, -1, origin);
-                mv.rotate(axisAngle, origin);
-                mv.translate(center);
-                newItems.push(mv);
-            }
-
-            // Mirror H+V
-            if (sym.mirrorH && sym.mirrorV) {
-                const mhv = item.clone();
-                mhv.data = { isUserItem: true };
-                mhv.selected = false;
-                layer.addChild(mhv);
-                mhv.translate(center.negate());
-                mhv.rotate(-axisAngle, origin);
-                mhv.scale(-1, -1, origin);
-                mhv.rotate(axisAngle, origin);
-                mhv.translate(center);
-                newItems.push(mhv);
+            // Single combined mirror copy
+            let mirrorCopy = null;
+            if (sym.mirrorH || sym.mirrorV) {
+                const mc = item.clone();
+                mc.data = { isUserItem: true };
+                mc.selected = false;
+                layer.addChild(mc);
+                mc.translate(center.negate());
+                mc.rotate(-axisAngle, origin);
+                mc.scale(sym.mirrorH ? -1 : 1, sym.mirrorV ? -1 : 1, origin);
+                mc.rotate(axisAngle, origin);
+                mc.translate(center);
+                mirrorCopy = mc;
+                newItems.push(mc);
             }
 
             // Rotational copies

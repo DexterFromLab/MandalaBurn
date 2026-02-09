@@ -387,9 +387,24 @@
                         bounds = bounds ? bounds.unite(item.bounds) : item.bounds.clone();
                     });
                     origBounds = bounds;
-                    // Default anchor = geometric centroid of all segment points
+                    // Default anchor = centroid of visible copies (or original if no symmetry)
                     if (!anchorPoint) {
-                        anchorPoint = computeCentroid(MB.App.selectedItems) || bounds.center;
+                        // For items hidden by symmetry, use mirror copies' centroid
+                        if (MB.Symmetry && MB.Symmetry._symmetryLayer) {
+                            const copies = [];
+                            MB.Symmetry._symmetryLayer.children.forEach(c => {
+                                if (c.data && c.data.symmetryOriginal &&
+                                    MB.App.selectedItems.includes(c.data.symmetryOriginal)) {
+                                    copies.push(c);
+                                }
+                            });
+                            if (copies.length > 0) {
+                                anchorPoint = computeCentroid(copies);
+                            }
+                        }
+                        if (!anchorPoint) {
+                            anchorPoint = computeCentroid(MB.App.selectedItems) || bounds.center;
+                        }
                     }
                     dragStart = event.point;
                     origItemStates = captureItemStates();
@@ -531,9 +546,15 @@
             }
 
             // Restore original geometry, then manually rotate each point
+            // Mirror (single axis) reverses rotation direction — negate to compensate
             items.forEach((item, i) => {
                 restoreGeometry(item, origItemStates[i].geometry);
-                manualRotate(item, deltaAngle, anchor);
+                let angle = deltaAngle;
+                if (item.data && item.data.symmetry) {
+                    const s = item.data.symmetry;
+                    if (!!s.mirrorH !== !!s.mirrorV) angle = -deltaAngle;
+                }
+                manualRotate(item, angle, anchor);
             });
 
             document.getElementById('status-info').textContent = 'Angle: ' + deltaAngle.toFixed(1) + '\u00B0';
