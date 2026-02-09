@@ -83,24 +83,56 @@ MB.BooleanOps = {
         try {
             const ix = p.getIntersections();
             if (ix.length === 0) return p;
+        } catch (e) {
+            return p;
+        }
+
+        const style = {
+            data: { ...p.data },
+            strokeColor: p.strokeColor,
+            strokeWidth: p.strokeWidth,
+            fillColor: p.fillColor
+        };
+
+        const replaceWith = (resolved) => {
+            Object.assign(resolved, { data: style.data });
+            resolved.strokeColor = style.strokeColor;
+            resolved.strokeWidth = style.strokeWidth;
+            resolved.fillColor = style.fillColor;
+            resolved.insertAbove(p);
+            const selIdx = MB.App.selectedItems.indexOf(p);
+            if (selIdx >= 0) MB.App.selectedItems[selIdx] = resolved;
+            p.remove();
+            return resolved;
+        };
+
+        // Method 1: resolveCrossings — Paper.js native, splits at crossings
+        try {
+            const copy = p.clone();
+            copy.resolveCrossings();
+            copy.reorient(true, true);
+            if (copy && (copy instanceof paper.CompoundPath ||
+                (copy instanceof paper.Path && copy.segments.length !== p.segments.length))) {
+                return replaceWith(copy);
+            }
+            copy.remove();
+        } catch (e) {
+            console.warn('resolveCrossings failed:', e.message);
+        }
+
+        // Method 2: unite with clone
+        try {
             const clone = p.clone();
             clone.visible = false;
             const resolved = p.unite(clone);
             clone.remove();
             if (resolved && resolved !== p) {
-                resolved.data = { ...p.data };
-                resolved.strokeColor = p.strokeColor;
-                resolved.strokeWidth = p.strokeWidth;
-                resolved.fillColor = p.fillColor;
-                resolved.insertAbove(p);
-                const selIdx = MB.App.selectedItems.indexOf(p);
-                if (selIdx >= 0) MB.App.selectedItems[selIdx] = resolved;
-                p.remove();
-                return resolved;
+                return replaceWith(resolved);
             }
         } catch (e) {
-            // If resolution fails, use original path
+            console.warn('unite self-resolve failed:', e.message);
         }
+
         return p;
     },
 
@@ -200,7 +232,7 @@ MB.BooleanOps = {
                 document.getElementById('status-info').textContent = 'Selected object must be a path or group';
                 return;
             }
-            if (MB.Parametric) MB.Parametric.flattenAll(items);
+            if (MB.Parametric) MB.Parametric.flattenAll([item]);
             MB.History.snapshot();
             const resolved = this._itemToPath(item);
             if (resolved && resolved !== item) {
@@ -210,10 +242,13 @@ MB.BooleanOps = {
                 resolved.fillColor = null;
                 resolved.data = { isUserItem: true };
                 MB.App.select(resolved);
-                document.getElementById('status-info').textContent = 'Unite: outline resolved (' +
-                    (resolved.segments ? resolved.segments.length : '?') + ' pts)';
+                const pts = resolved.segments ? resolved.segments.length :
+                    (resolved.children ? resolved.children.reduce((s, c) => s + (c.segments ? c.segments.length : 0), 0) : '?');
+                document.getElementById('status-info').textContent =
+                    'Unite: outline resolved (' + pts + ' pts)';
             } else {
-                document.getElementById('status-info').textContent = 'No self-intersections to resolve';
+                document.getElementById('status-info').textContent =
+                    'Could not resolve — path may be too complex. Try with fewer segments.';
             }
             return;
         }
