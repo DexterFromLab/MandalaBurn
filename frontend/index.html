@@ -373,6 +373,74 @@
                     Set center, then draw with any tool. Symmetry stays active.
                     Flatten converts mirrors into permanent items.
                 </div>
+
+                <!-- Curve Generators -->
+                <div style="border-top:1px solid var(--border);margin:6px 0"></div>
+                <div class="tool-opts-title">Generators</div>
+                <div class="prop-row">
+                    <select id="gen-type" style="flex:1">
+                        <option value="spirograph">Spirograph</option>
+                        <option value="rose">Rose curve</option>
+                        <option value="lissajous">Lissajous</option>
+                        <option value="harmonograph">Harmonograph</option>
+                        <option value="guilloche">Guilloche</option>
+                    </select>
+                </div>
+                <div class="prop-row">
+                    <select id="gen-preset" style="flex:1">
+                        <option value="">Custom</option>
+                    </select>
+                </div>
+
+                <!-- Spirograph params -->
+                <div id="gen-spirograph" class="gen-params">
+                    <div class="prop-row"><label>R</label><input type="number" id="gen-sp-R" value="50" min="5" max="200" step="1" style="width:50px" title="Fixed circle radius"></div>
+                    <div class="prop-row"><label>r</label><input type="number" id="gen-sp-r" value="20" min="1" max="100" step="1" style="width:50px" title="Rolling circle radius"></div>
+                    <div class="prop-row"><label>d</label><input type="number" id="gen-sp-d" value="15" min="0.1" max="100" step="0.5" style="width:50px" title="Pen offset"></div>
+                    <div class="prop-row"><label><input type="checkbox" id="gen-sp-epi"> Epi</label></div>
+                </div>
+
+                <!-- Rose params -->
+                <div id="gen-rose" class="gen-params hidden">
+                    <div class="prop-row"><label>Size</label><input type="number" id="gen-rs-a" value="50" min="5" max="200" step="1" style="width:50px"></div>
+                    <div class="prop-row"><label>n</label><input type="number" id="gen-rs-n" value="3" min="1" max="20" step="1" style="width:50px" title="Numerator (petals)"></div>
+                    <div class="prop-row"><label>d</label><input type="number" id="gen-rs-d" value="1" min="1" max="20" step="1" style="width:50px" title="Denominator"></div>
+                </div>
+
+                <!-- Lissajous params -->
+                <div id="gen-lissajous" class="gen-params hidden">
+                    <div class="prop-row"><label>W</label><input type="number" id="gen-li-A" value="50" min="5" max="200" step="1" style="width:50px" title="X amplitude"></div>
+                    <div class="prop-row"><label>H</label><input type="number" id="gen-li-B" value="50" min="5" max="200" step="1" style="width:50px" title="Y amplitude"></div>
+                    <div class="prop-row"><label>a</label><input type="number" id="gen-li-a" value="3" min="1" max="20" step="1" style="width:50px" title="X frequency"></div>
+                    <div class="prop-row"><label>b</label><input type="number" id="gen-li-b" value="2" min="1" max="20" step="1" style="width:50px" title="Y frequency"></div>
+                    <div class="prop-row"><label>&delta;</label><input type="range" id="gen-li-delta" min="0" max="360" step="5" value="0" style="flex:1"><span id="gen-li-delta-val" style="width:30px;text-align:right;font-size:10px">0&deg;</span></div>
+                </div>
+
+                <!-- Harmonograph params -->
+                <div id="gen-harmonograph" class="gen-params hidden">
+                    <div class="prop-row"><label>Size</label><input type="number" id="gen-ha-size" value="50" min="5" max="200" step="1" style="width:50px"></div>
+                    <div class="prop-row"><label>fX</label><input type="number" id="gen-ha-fx" value="3" min="0.5" max="20" step="0.01" style="width:50px" title="X frequency"></div>
+                    <div class="prop-row"><label>fY</label><input type="number" id="gen-ha-fy" value="2" min="0.5" max="20" step="0.01" style="width:50px" title="Y frequency"></div>
+                    <div class="prop-row"><label>&phi;X</label><input type="number" id="gen-ha-px" value="0" min="0" max="360" step="5" style="width:50px" title="X phase"></div>
+                    <div class="prop-row"><label>&phi;Y</label><input type="number" id="gen-ha-py" value="0" min="0" max="360" step="5" style="width:50px" title="Y phase"></div>
+                    <div class="prop-row"><label>Dcy</label><input type="range" id="gen-ha-decay" min="0.001" max="0.1" step="0.001" value="0.02" style="flex:1"><span id="gen-ha-decay-val" style="width:35px;text-align:right;font-size:10px">0.020</span></div>
+                </div>
+
+                <!-- Guilloche params -->
+                <div id="gen-guilloche" class="gen-params hidden">
+                    <div class="prop-row"><label>R</label><input type="number" id="gen-gu-R" value="50" min="5" max="200" step="1" style="width:50px"></div>
+                    <div class="prop-row"><label>r</label><input type="number" id="gen-gu-r" value="15" min="1" max="100" step="1" style="width:50px"></div>
+                    <div class="prop-row"><label>d1</label><input type="number" id="gen-gu-d1" value="10" min="0.1" max="100" step="0.5" style="width:50px" title="Inner pen offset"></div>
+                    <div class="prop-row"><label>d2</label><input type="number" id="gen-gu-d2" value="20" min="0.1" max="100" step="0.5" style="width:50px" title="Outer pen offset"></div>
+                    <div class="prop-row"><label>Lines</label><input type="number" id="gen-gu-lines" value="80" min="20" max="500" step="10" style="width:50px"></div>
+                </div>
+
+                <div class="prop-row">
+                    <button class="to-btn" id="gen-generate" style="background:var(--accent);color:white;flex:1">&#x2728; Generate</button>
+                </div>
+                <div class="prop-row" style="font-size:10px;color:var(--text-muted)">
+                    Creates curve at mandala center (or canvas center).
+                </div>
             </div>
         </div>
 
@@ -486,6 +554,44 @@
                                 <input type="range" id="param-text-arc" min="-360" max="360" step="5" value="0" style="flex:1">
                                 <span id="param-text-arc-val" style="width:35px;text-align:right;font-size:10px">0&deg;</span>
                             </div>
+                        </div>
+
+                        <div id="param-spirograph" class="param-group hidden">
+                            <div class="prop-row"><label>R</label><input type="number" id="param-sp-R" step="1" min="5" style="width:55px"></div>
+                            <div class="prop-row"><label>r</label><input type="number" id="param-sp-r" step="1" min="1" style="width:55px"></div>
+                            <div class="prop-row"><label>d</label><input type="number" id="param-sp-d" step="0.5" min="0.1" style="width:55px"></div>
+                            <div class="prop-row"><label><input type="checkbox" id="param-sp-epi"> Epi</label></div>
+                        </div>
+
+                        <div id="param-rose" class="param-group hidden">
+                            <div class="prop-row"><label>Size</label><input type="number" id="param-rs-a" step="1" min="5" style="width:55px"></div>
+                            <div class="prop-row"><label>n</label><input type="number" id="param-rs-n" step="1" min="1" style="width:55px"></div>
+                            <div class="prop-row"><label>d</label><input type="number" id="param-rs-d" step="1" min="1" style="width:55px"></div>
+                        </div>
+
+                        <div id="param-lissajous" class="param-group hidden">
+                            <div class="prop-row"><label>A</label><input type="number" id="param-li-A" step="1" min="5" style="width:55px"></div>
+                            <div class="prop-row"><label>B</label><input type="number" id="param-li-B" step="1" min="5" style="width:55px"></div>
+                            <div class="prop-row"><label>a</label><input type="number" id="param-li-a" step="1" min="1" style="width:55px"></div>
+                            <div class="prop-row"><label>b</label><input type="number" id="param-li-b" step="1" min="1" style="width:55px"></div>
+                            <div class="prop-row"><label>&delta;</label><input type="number" id="param-li-delta" step="5" min="0" max="360" style="width:55px"></div>
+                        </div>
+
+                        <div id="param-harmonograph" class="param-group hidden">
+                            <div class="prop-row"><label>Size</label><input type="number" id="param-ha-size" step="1" min="5" style="width:55px"></div>
+                            <div class="prop-row"><label>fX</label><input type="number" id="param-ha-fx" step="0.01" min="0.5" style="width:55px"></div>
+                            <div class="prop-row"><label>fY</label><input type="number" id="param-ha-fy" step="0.01" min="0.5" style="width:55px"></div>
+                            <div class="prop-row"><label>&phi;X</label><input type="number" id="param-ha-px" step="5" min="0" max="360" style="width:55px"></div>
+                            <div class="prop-row"><label>&phi;Y</label><input type="number" id="param-ha-py" step="5" min="0" max="360" style="width:55px"></div>
+                            <div class="prop-row"><label>Decay</label><input type="number" id="param-ha-decay" step="0.001" min="0.001" max="0.1" style="width:55px"></div>
+                        </div>
+
+                        <div id="param-guilloche" class="param-group hidden">
+                            <div class="prop-row"><label>R</label><input type="number" id="param-gu-R" step="1" min="5" style="width:55px"></div>
+                            <div class="prop-row"><label>r</label><input type="number" id="param-gu-r" step="1" min="1" style="width:55px"></div>
+                            <div class="prop-row"><label>d1</label><input type="number" id="param-gu-d1" step="0.5" min="0.1" style="width:55px"></div>
+                            <div class="prop-row"><label>d2</label><input type="number" id="param-gu-d2" step="0.5" min="0.1" style="width:55px"></div>
+                            <div class="prop-row"><label>Lines</label><input type="number" id="param-gu-lines" step="10" min="20" max="500" style="width:55px"></div>
                         </div>
                     </div>
                 </div>
@@ -1022,6 +1128,7 @@
     <script src="/js/simulator.js"></script>
     <script src="/js/mandala.js"></script>
     <script src="/js/symmetry.js"></script>
+    <script src="/js/generators.js"></script>
     <script src="/js/align.js"></script>
     <script src="/js/gcode.js"></script>
     <script src="/js/job-sender.js"></script>

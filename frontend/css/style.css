@@ -187,6 +187,7 @@ body {
 }
 .tool-opts-sub { display: flex; flex-direction: column; gap: 4px; }
 .tool-opts-sub.hidden { display: none; }
+.gen-params { display: flex; flex-direction: column; gap: 4px; }
 .to-btn-group { display: flex; gap: 2px; flex-wrap: wrap; }
 .to-btn {
     background: var(--bg-primary);

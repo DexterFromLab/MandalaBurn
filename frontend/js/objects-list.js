@@ -175,7 +175,8 @@ MB.ObjectsList = {
     _getTypeName(item) {
         // Use parametric shapeType if available
         if (item.data && item.data.shapeType) {
-            const names = { rect: 'Rect', ellipse: 'Ellipse', polygon: 'Polygon', text: 'Text' };
+            const names = { rect: 'Rect', ellipse: 'Ellipse', polygon: 'Polygon', text: 'Text',
+                spirograph: 'Spiro', rose: 'Rose', lissajous: 'Lissaj.', harmonograph: 'Harmon.', guilloche: 'Guillo.' };
             return names[item.data.shapeType] || item.data.shapeType;
         }
         if (item instanceof paper.CompoundPath) return 'Compound';
@@ -196,7 +197,8 @@ MB.ObjectsList = {
     _getIcon(item) {
         // Use parametric shapeType for icons
         if (item.data && item.data.shapeType) {
-            const icons = { rect: '\u25AD', ellipse: '\u25CB', polygon: '\u2B23', text: 'T' };
+            const icons = { rect: '\u25AD', ellipse: '\u25CB', polygon: '\u2B23', text: 'T',
+                spirograph: '\u2609', rose: '\u2740', lissajous: '\u221E', harmonograph: '\u223F', guilloche: '\u2736' };
             return icons[item.data.shapeType] || '\u25A1';
         }
         if (item instanceof paper.CompoundPath) return '\u29C9'; // ⧉

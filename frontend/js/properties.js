@@ -148,6 +148,41 @@ MB.Properties = {
             });
         }
 
+        // Generator parametric inputs
+        this._wireParamInput('param-sp-R', (item, val) => { item.data.shapeParams.R = val; });
+        this._wireParamInput('param-sp-r', (item, val) => { item.data.shapeParams.r = val; });
+        this._wireParamInput('param-sp-d', (item, val) => { item.data.shapeParams.d = val; });
+        const epiCb = document.getElementById('param-sp-epi');
+        if (epiCb) {
+            epiCb.addEventListener('change', () => {
+                const item = MB.App.selectedItems[0];
+                if (!item || !MB.Parametric.isParametric(item)) return;
+                MB.History.snapshot();
+                item.data.shapeParams.mode = epiCb.checked ? 'epi' : 'hypo';
+                MB.Parametric.regenerate(item);
+                paper.view.update();
+            });
+        }
+        this._wireParamInput('param-rs-a', (item, val) => { item.data.shapeParams.a = val; });
+        this._wireParamInput('param-rs-n', (item, val) => { item.data.shapeParams.n = Math.round(val); });
+        this._wireParamInput('param-rs-d', (item, val) => { item.data.shapeParams.d = Math.round(val); });
+        this._wireParamInput('param-li-A', (item, val) => { item.data.shapeParams.A = val; });
+        this._wireParamInput('param-li-B', (item, val) => { item.data.shapeParams.B = val; });
+        this._wireParamInput('param-li-a', (item, val) => { item.data.shapeParams.a = Math.round(val); });
+        this._wireParamInput('param-li-b', (item, val) => { item.data.shapeParams.b = Math.round(val); });
+        this._wireParamInput('param-li-delta', (item, val) => { item.data.shapeParams.delta = val; });
+        this._wireParamInput('param-ha-size', (item, val) => { item.data.shapeParams.size = val; });
+        this._wireParamInput('param-ha-fx', (item, val) => { item.data.shapeParams.freqX = val; });
+        this._wireParamInput('param-ha-fy', (item, val) => { item.data.shapeParams.freqY = val; });
+        this._wireParamInput('param-ha-px', (item, val) => { item.data.shapeParams.phaseX = val; });
+        this._wireParamInput('param-ha-py', (item, val) => { item.data.shapeParams.phaseY = val; });
+        this._wireParamInput('param-ha-decay', (item, val) => { item.data.shapeParams.decay = val; });
+        this._wireParamInput('param-gu-R', (item, val) => { item.data.shapeParams.R = val; });
+        this._wireParamInput('param-gu-r', (item, val) => { item.data.shapeParams.r = val; });
+        this._wireParamInput('param-gu-d1', (item, val) => { item.data.shapeParams.d1 = val; });
+        this._wireParamInput('param-gu-d2', (item, val) => { item.data.shapeParams.d2 = val; });
+        this._wireParamInput('param-gu-lines', (item, val) => { item.data.shapeParams.nLines = Math.round(val); });
+
         // Arc text slider (live preview)
         const arcSlider = document.getElementById('param-text-arc');
         if (arcSlider) {
@@ -396,7 +431,9 @@ MB.Properties = {
         const typeLabel = document.getElementById('param-type-label');
 
         // Type label
-        const typeNames = { rect: 'Rectangle', ellipse: 'Ellipse', polygon: 'Polygon', text: 'Text' };
+        const typeNames = { rect: 'Rectangle', ellipse: 'Ellipse', polygon: 'Polygon', text: 'Text',
+            spirograph: 'Spirograph', rose: 'Rose Curve', lissajous: 'Lissajous',
+            harmonograph: 'Harmonograph', guilloche: 'Guilloche' };
         if (typeLabel) typeLabel.textContent = typeNames[type] || type;
 
         // Show the matching group
@@ -440,6 +477,40 @@ MB.Properties = {
                 if (arcV) arcV.textContent = arcVal + '\u00B0';
                 // Populate font select
                 this._populateParamFontSelect(params.fontName);
+                break;
+            case 'spirograph':
+                this._setVal('param-sp-R', params.R);
+                this._setVal('param-sp-r', params.r);
+                this._setVal('param-sp-d', params.d);
+                const spEpi = document.getElementById('param-sp-epi');
+                if (spEpi) spEpi.checked = params.mode === 'epi';
+                break;
+            case 'rose':
+                this._setVal('param-rs-a', params.a);
+                this._setVal('param-rs-n', params.n);
+                this._setVal('param-rs-d', params.d);
+                break;
+            case 'lissajous':
+                this._setVal('param-li-A', params.A);
+                this._setVal('param-li-B', params.B);
+                this._setVal('param-li-a', params.a);
+                this._setVal('param-li-b', params.b);
+                this._setVal('param-li-delta', params.delta);
+                break;
+            case 'harmonograph':
+                this._setVal('param-ha-size', params.size);
+                this._setVal('param-ha-fx', params.freqX);
+                this._setVal('param-ha-fy', params.freqY);
+                this._setVal('param-ha-px', params.phaseX);
+                this._setVal('param-ha-py', params.phaseY);
+                this._setVal('param-ha-decay', params.decay);
+                break;
+            case 'guilloche':
+                this._setVal('param-gu-R', params.R);
+                this._setVal('param-gu-r', params.r);
+                this._setVal('param-gu-d1', params.d1);
+                this._setVal('param-gu-d2', params.d2);
+                this._setVal('param-gu-lines', params.nLines);
                 break;
         }
     },

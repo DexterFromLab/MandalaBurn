@@ -33,6 +33,7 @@ MB.App = {
         MB.FontManager.init();
         MB.Mandala.init();
         MB.Symmetry.init();
+        MB.Generators.init();
         MB.Simulator.init();
         MB.ArrayPattern.init();
         MB.PathOffset.init();
