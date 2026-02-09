@@ -7,6 +7,7 @@ MB.Mandala = {
     showGuides: true,
     showRings: true,
     ringSpacing: 20,        // mm between rings
+    _sourceLayerId: null,   // layer ID where mandala was activated
 
     _guideLayer: null,
     _mirrorLayer: null,
@@ -108,6 +109,7 @@ MB.Mandala = {
     toggleActive() {
         if (this.active) {
             this.active = false;
+            this._sourceLayerId = null;
             this._guideLayer.visible = false;
             this._mirrorLayer.visible = false;
             this.clearGuides();
@@ -142,6 +144,9 @@ MB.Mandala = {
 
     setCenter(point) {
         this.center = new paper.Point(point.x, point.y);
+        // Remember which layer mandala operates on
+        const al = MB.Layers.getActiveLayer();
+        if (al) this._sourceLayerId = al.id;
         document.getElementById('mandala-cx').value = point.x.toFixed(1);
         document.getElementById('mandala-cy').value = point.y.toFixed(1);
         this.drawGuides();
@@ -152,15 +157,15 @@ MB.Mandala = {
     flatten() {
         if (!this.active || !this.center) return;
 
-        // Collect source items
+        // Only flatten items on the mandala source layer
+        const sourceLayer = MB.Layers.layers.find(l => l.id === this._sourceLayerId);
+        if (!sourceLayer) return;
+
         const sourceItems = [];
-        MB.Layers.layers.forEach(layer => {
-            if (!layer.visible) return;
-            layer.paperLayer.children.forEach(item => {
-                if (item.data && item.data.isUserItem) {
-                    sourceItems.push(item);
-                }
-            });
+        sourceLayer.paperLayer.children.forEach(item => {
+            if (item.data && item.data.isUserItem) {
+                sourceItems.push(item);
+            }
         });
         if (sourceItems.length === 0) return;
 
@@ -228,15 +233,15 @@ MB.Mandala = {
 
         const angleStep = 360 / this.segments;
 
-        // Collect all source items first (avoid modifying arrays during iteration)
+        // Only mirror items on the layer where mandala was activated
+        const sourceLayer = MB.Layers.layers.find(l => l.id === this._sourceLayerId);
+        if (!sourceLayer || !sourceLayer.visible) return;
+
         const sourceItems = [];
-        MB.Layers.layers.forEach(layer => {
-            if (!layer.visible) return;
-            layer.paperLayer.children.forEach(item => {
-                if (item.data && item.data.isUserItem) {
-                    sourceItems.push(item);
-                }
-            });
+        sourceLayer.paperLayer.children.forEach(item => {
+            if (item.data && item.data.isUserItem) {
+                sourceItems.push(item);
+            }
         });
 
         // Create mirrors for each source item
