@@ -36,6 +36,7 @@ MB.Simulator = {
         const rapidSpeed = (MB.Machine.settings.maxSpeed || 6000) / 60; // mm/min → mm/s
 
         let pos = { x: 0, y: 0 };
+        let _dbgOrig = 0, _dbgMandala = 0, _dbgSym = 0;
 
         MB.Layers.layers.forEach(layer => {
             if (!layer.output || !layer.visible) return;
@@ -46,11 +47,16 @@ MB.Simulator = {
                 layer.paperLayer.children.forEach(item => {
                     if (!item.data || !item.data.isUserItem) return;
 
-                    // If item has symmetry modifier, compile mirror copies instead of hidden original
-                    if (item.data.symmetry && MB.Symmetry && MB.Symmetry.hasSymmetry(item) && MB.Symmetry._symmetryLayer) {
+                    const hasSym = item.data.symmetry && MB.Symmetry &&
+                        MB.Symmetry.hasSymmetry(item) && MB.Symmetry._symmetryLayer;
+                    const hasMandala = MB.Mandala && MB.Mandala.active && MB.Mandala._mirrorLayer;
+
+                    if (hasSym && !hasMandala) {
+                        // Symmetry only (no mandala): compile symmetry copies instead of original
                         MB.Symmetry._symmetryLayer.children.forEach(copy => {
                             if (copy.data && copy.data.symmetryOriginal === item) {
                                 this._compileItem(copy, layer, ls, pass, passes, rapidSpeed, pos);
+                                _dbgSym++;
                                 if (this.commands.length > 0) {
                                     const last = this.commands[this.commands.length - 1];
                                     pos = { x: last.to.x, y: last.to.y };
@@ -60,18 +66,20 @@ MB.Simulator = {
                         return;
                     }
 
+                    // Compile original item (or hidden original — geometry is still valid)
                     this._compileItem(item, layer, ls, pass, passes, rapidSpeed, pos);
-                    // Update pos to last command's endpoint
+                    _dbgOrig++;
                     if (this.commands.length > 0) {
                         const last = this.commands[this.commands.length - 1];
                         pos = { x: last.to.x, y: last.to.y };
                     }
 
-                    // If mandala is active, also compile this item's mandala copies
-                    if (MB.Mandala && MB.Mandala.active && MB.Mandala._mirrorLayer) {
+                    // Compile mandala copies of this item
+                    if (hasMandala) {
                         MB.Mandala._mirrorLayer.children.forEach(copy => {
                             if (copy.data && copy.data.mandalaSource === item) {
                                 this._compileItem(copy, layer, ls, pass, passes, rapidSpeed, pos);
+                                _dbgMandala++;
                                 if (this.commands.length > 0) {
                                     const last = this.commands[this.commands.length - 1];
                                     pos = { x: last.to.x, y: last.to.y };
@@ -82,6 +90,8 @@ MB.Simulator = {
                 });
             }
         });
+
+        console.log('[Simulator compile]', _dbgOrig, 'originals,', _dbgMandala, 'mandala,', _dbgSym, 'symmetry =', _dbgOrig + _dbgMandala + _dbgSym, 'items,', this.commands.length, 'commands');
 
         // Rapid back to origin at end
         if (pos.x !== 0 || pos.y !== 0) {

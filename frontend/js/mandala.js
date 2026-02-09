@@ -241,6 +241,10 @@ MB.Mandala = {
     },
 
     _createItemMirrors(item, angleStep) {
+        // Temporarily restore visibility if hidden by symmetry (so clones are visible)
+        const wasHidden = !item.visible && item.data && item.data._hiddenBySym;
+        if (wasHidden) item.visible = true;
+
         // Rotated copies (i=0 is the original on the user layer, skip it)
         for (let i = 1; i < this.segments; i++) {
             const copy = item.clone();
@@ -267,6 +271,9 @@ MB.Mandala = {
                 this._mirrorLayer.addChild(mc);
             }
         }
+
+        // Restore hidden state if item was hidden by symmetry
+        if (wasHidden) item.visible = false;
     },
 
     _clearMirrors() {
