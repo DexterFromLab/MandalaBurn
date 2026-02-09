@@ -182,42 +182,116 @@
         return pts[opposites[handleIndex]];
     }
 
-    // Save full geometry so we can restore perfectly before each transform frame
+    // Save geometry as raw numeric coordinates (no Paper.js objects)
     function saveGeometry(item) {
+        function savePathSegs(path) {
+            return path.segments.map(seg => ({
+                px: seg.point.x, py: seg.point.y,
+                hix: seg.handleIn.x, hiy: seg.handleIn.y,
+                hox: seg.handleOut.x, hoy: seg.handleOut.y
+            }));
+        }
         if (item instanceof paper.CompoundPath) {
-            return {
-                type: 'compound',
-                children: item.children.map(c => c.segments.map(s => s.clone()))
-            };
+            return { type: 'compound', children: item.children.map(c => savePathSegs(c)) };
         }
         if (item instanceof paper.Group) {
-            return {
-                type: 'group',
-                children: item.children.map(c => saveGeometry(c))
-            };
+            return { type: 'group', children: item.children.map(c => saveGeometry(c)) };
         }
         if (item instanceof paper.Path) {
-            return { type: 'path', segments: item.segments.map(s => s.clone()) };
+            return { type: 'path', segments: savePathSegs(item) };
         }
         return null;
     }
 
+    // Restore geometry in-place from raw coordinates
     function restoreGeometry(item, saved) {
+        function restorePathSegs(path, segs) {
+            for (let i = 0; i < path.segments.length && i < segs.length; i++) {
+                const seg = path.segments[i], s = segs[i];
+                seg.point.set(s.px, s.py);
+                seg.handleIn.set(s.hix, s.hiy);
+                seg.handleOut.set(s.hox, s.hoy);
+            }
+        }
         if (!saved) return;
         if (saved.type === 'path' && item instanceof paper.Path) {
-            item.removeSegments();
-            item.addSegments(saved.segments.map(s => s.clone()));
+            restorePathSegs(item, saved.segments);
         } else if (saved.type === 'compound' && item instanceof paper.CompoundPath) {
             item.children.forEach((child, i) => {
-                if (!saved.children[i]) return;
-                child.removeSegments();
-                child.addSegments(saved.children[i].map(s => s.clone()));
+                if (saved.children[i]) restorePathSegs(child, saved.children[i]);
             });
         } else if (saved.type === 'group' && item instanceof paper.Group) {
             item.children.forEach((child, i) => {
                 if (saved.children[i]) restoreGeometry(child, saved.children[i]);
             });
         }
+    }
+
+    // Manual point-by-point rotation — pure trigonometry, bypasses Paper.js transforms
+    function manualRotate(item, angleDeg, center) {
+        const rad = angleDeg * Math.PI / 180;
+        const cos = Math.cos(rad), sin = Math.sin(rad);
+        function rotateSegs(path) {
+            for (let i = 0; i < path.segments.length; i++) {
+                const seg = path.segments[i];
+                // Rotate point around center
+                const dx = seg.point.x - center.x, dy = seg.point.y - center.y;
+                seg.point.set(center.x + dx * cos - dy * sin,
+                              center.y + dx * sin + dy * cos);
+                // Rotate handles (relative to point, rotate around origin)
+                const hix = seg.handleIn.x, hiy = seg.handleIn.y;
+                seg.handleIn.set(hix * cos - hiy * sin, hix * sin + hiy * cos);
+                const hox = seg.handleOut.x, hoy = seg.handleOut.y;
+                seg.handleOut.set(hox * cos - hoy * sin, hox * sin + hoy * cos);
+            }
+        }
+        if (item instanceof paper.CompoundPath) {
+            item.children.forEach(child => rotateSegs(child));
+        } else if (item instanceof paper.Group) {
+            item.children.forEach(child => manualRotate(child, angleDeg, center));
+        } else if (item instanceof paper.Path) {
+            rotateSegs(item);
+        }
+    }
+
+    // Manual point-by-point scaling — direct coordinate math
+    function manualScale(item, sx, sy, center) {
+        function scaleSegs(path) {
+            for (let i = 0; i < path.segments.length; i++) {
+                const seg = path.segments[i];
+                seg.point.set(center.x + (seg.point.x - center.x) * sx,
+                              center.y + (seg.point.y - center.y) * sy);
+                seg.handleIn.set(seg.handleIn.x * sx, seg.handleIn.y * sy);
+                seg.handleOut.set(seg.handleOut.x * sx, seg.handleOut.y * sy);
+            }
+        }
+        if (item instanceof paper.CompoundPath) {
+            item.children.forEach(child => scaleSegs(child));
+        } else if (item instanceof paper.Group) {
+            item.children.forEach(child => manualScale(child, sx, sy, center));
+        } else if (item instanceof paper.Path) {
+            scaleSegs(item);
+        }
+    }
+
+    // Compute geometric centroid of all segment points across items
+    function computeCentroid(items) {
+        let sumX = 0, sumY = 0, count = 0;
+        function addPts(item) {
+            if (item instanceof paper.CompoundPath) {
+                item.children.forEach(c => addPts(c));
+            } else if (item instanceof paper.Group) {
+                item.children.forEach(c => addPts(c));
+            } else if (item instanceof paper.Path) {
+                for (let i = 0; i < item.segments.length; i++) {
+                    sumX += item.segments[i].point.x;
+                    sumY += item.segments[i].point.y;
+                    count++;
+                }
+            }
+        }
+        items.forEach(item => addPts(item));
+        return count > 0 ? new paper.Point(sumX / count, sumY / count) : null;
     }
 
     function captureItemStates() {
@@ -300,7 +374,10 @@
                         bounds = bounds ? bounds.unite(item.bounds) : item.bounds.clone();
                     });
                     origBounds = bounds;
-                    if (!anchorPoint) anchorPoint = bounds.center;
+                    // Default anchor = geometric centroid of all segment points
+                    if (!anchorPoint) {
+                        anchorPoint = computeCentroid(MB.App.selectedItems) || bounds.center;
+                    }
                     dragStart = event.point;
                     origItemStates = captureItemStates();
                     return;
@@ -399,12 +476,10 @@
                 sy = sy < 0 ? -uniform : uniform;
             }
 
-            // Restore original geometry, then apply total scale from anchor
+            // Restore original geometry, then manually scale each point
             items.forEach((item, i) => {
                 restoreGeometry(item, origItemStates[i].geometry);
-            });
-            items.forEach(item => {
-                item.scale(sx, sy, anchor);
+                manualScale(item, sx, sy, anchor);
             });
 
             document.getElementById('status-info').textContent =
@@ -429,12 +504,10 @@
                 deltaAngle = Math.round(deltaAngle / 15) * 15;
             }
 
-            // Restore original geometry, then apply total rotation from anchor
+            // Restore original geometry, then manually rotate each point
             items.forEach((item, i) => {
                 restoreGeometry(item, origItemStates[i].geometry);
-            });
-            items.forEach(item => {
-                item.rotate(deltaAngle, anchor);
+                manualRotate(item, deltaAngle, anchor);
             });
 
             document.getElementById('status-info').textContent = 'Angle: ' + deltaAngle.toFixed(1) + '\u00B0';
