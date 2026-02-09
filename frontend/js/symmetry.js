@@ -16,6 +16,11 @@ MB.Symmetry = {
 
         this._wireUI();
         this._startLiveUpdate();
+
+        // Direct event listener — reliable panel sync even if rAF rebuild fails
+        MB.App.on('selection-changed', (sel) => {
+            this._updatePanel(Array.isArray(sel) ? sel : MB.App.selectedItems);
+        });
     },
 
     // --- Live Update Loop ---
@@ -39,7 +44,11 @@ MB.Symmetry = {
     _doRebuild() {
         try {
             this.rebuildAll();
-            // Poll selection state to keep panel in sync
+        } catch (e) {
+            // Prevent rAF loop from dying on rebuild error
+        }
+        // Always sync panel regardless of rebuild errors
+        try {
             const sel = MB.App.selectedItems;
             const key = sel.length + ':' + sel.map(i => i.id).join(',');
             if (key !== this._lastSelKey) {
@@ -47,7 +56,7 @@ MB.Symmetry = {
                 this._updatePanel(sel);
             }
         } catch (e) {
-            // Prevent rAF loop from dying on error
+            // Prevent rAF loop from dying on panel error
         }
     },
 

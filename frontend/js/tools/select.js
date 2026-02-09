@@ -11,7 +11,7 @@
     let anchorPoint = null; // paper.Point
     let activeHandle = null; // { type: 'scale'|'rotate', index, pos }
     let origBounds = null;
-    let origItemStates = []; // [{position, scaling, rotation, matrix}]
+    let origItemStates = []; // [{position, bounds, geometry}]
     let hasDragged = false;
     let lastClickTime = 0;
     let lastClickPoint = null;
@@ -182,11 +182,49 @@
         return pts[opposites[handleIndex]];
     }
 
+    // Save full geometry so we can restore perfectly before each transform frame
+    function saveGeometry(item) {
+        if (item instanceof paper.CompoundPath) {
+            return {
+                type: 'compound',
+                children: item.children.map(c => c.segments.map(s => s.clone()))
+            };
+        }
+        if (item instanceof paper.Group) {
+            return {
+                type: 'group',
+                children: item.children.map(c => saveGeometry(c))
+            };
+        }
+        if (item instanceof paper.Path) {
+            return { type: 'path', segments: item.segments.map(s => s.clone()) };
+        }
+        return null;
+    }
+
+    function restoreGeometry(item, saved) {
+        if (!saved) return;
+        if (saved.type === 'path' && item instanceof paper.Path) {
+            item.removeSegments();
+            item.addSegments(saved.segments.map(s => s.clone()));
+        } else if (saved.type === 'compound' && item instanceof paper.CompoundPath) {
+            item.children.forEach((child, i) => {
+                if (!saved.children[i]) return;
+                child.removeSegments();
+                child.addSegments(saved.children[i].map(s => s.clone()));
+            });
+        } else if (saved.type === 'group' && item instanceof paper.Group) {
+            item.children.forEach((child, i) => {
+                if (saved.children[i]) restoreGeometry(child, saved.children[i]);
+            });
+        }
+    }
+
     function captureItemStates() {
         return MB.App.selectedItems.map(item => ({
             position: item.position.clone(),
             bounds: item.bounds.clone(),
-            matrix: item.matrix.clone()
+            geometry: saveGeometry(item)
         }));
     }
 
@@ -249,7 +287,6 @@
                     });
                     origBounds = bounds;
                     origItemStates = captureItemStates();
-                    // Set anchor to opposite corner if not custom
                     anchorPoint = getScaleAnchor(hh.index, bounds);
                     dragStart = event.point;
                     redrawHandles();
@@ -362,19 +399,14 @@
                 sy = sy < 0 ? -uniform : uniform;
             }
 
-            // Apply scale relative to anchor
+            // Restore original geometry, then apply total scale from anchor
             items.forEach((item, i) => {
-                const orig = origItemStates[i];
-                const newPos = anchor.add(orig.position.subtract(anchor).multiply(new paper.Point(sx, sy)));
-                item.position = newPos;
-                const origW = orig.bounds.width;
-                const origH = orig.bounds.height;
-                if (origW > 0) item.scale(item.bounds.width > 0 ? (origW * Math.abs(sx)) / item.bounds.width : 1,
-                                           item.bounds.height > 0 ? (origH * Math.abs(sy)) / item.bounds.height : 1);
+                restoreGeometry(item, origItemStates[i].geometry);
+            });
+            items.forEach(item => {
+                item.scale(sx, sy, anchor);
             });
 
-            // Status bar
-            const b = items.length === 1 ? items[0].bounds : origBounds;
             document.getElementById('status-info').textContent =
                 'W: ' + (origBounds.width * Math.abs(sx)).toFixed(1) +
                 ' H: ' + (origBounds.height * Math.abs(sy)).toFixed(1);
@@ -397,10 +429,9 @@
                 deltaAngle = Math.round(deltaAngle / 15) * 15;
             }
 
-            // Restore original matrix and apply new rotation
+            // Restore original geometry, then apply total rotation from anchor
             items.forEach((item, i) => {
-                const orig = origItemStates[i];
-                item.matrix.set(orig.matrix);
+                restoreGeometry(item, origItemStates[i].geometry);
             });
             items.forEach(item => {
                 item.rotate(deltaAngle, anchor);
