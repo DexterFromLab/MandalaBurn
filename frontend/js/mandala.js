@@ -185,18 +185,13 @@ MB.Mandala = {
                 copy.data = { isUserItem: true };
                 copy.selected = false;
 
-                if (this.mirror && i % 2 === 1) {
-                    // Odd sector: reflect across first sector boundary, then rotate
+                if (this.mirror) {
+                    // Flip across horizontal axis through center, then rotate
                     copy.translate(this.center.negate());
-                    copy.rotate(-angleStep, origin);
                     copy.scale(1, -1, origin);
-                    copy.rotate(angleStep, origin);
                     copy.translate(this.center);
-                    if (i > 1) copy.rotate((i - 1) * angleStep, this.center);
-                } else {
-                    // Even sector: pure rotation
-                    copy.rotate(angleStep * i, this.center);
                 }
+                copy.rotate(angleStep * i, this.center);
 
                 allItems.push(copy);
             }
@@ -253,23 +248,20 @@ MB.Mandala = {
         const startI = wasHidden ? 0 : 1;
 
         // Single loop: exactly `segments` elements total (including original at i=0).
-        // With mirror: even i = rotated, odd i = reflected (kaleidoscope pattern).
-        // Without mirror: all copies are simple rotations.
+        // Mirror flips each copy across horizontal axis through center (changes
+        // orientation but keeps copies evenly spaced at angleStep intervals).
         for (let i = startI; i < this.segments; i++) {
             const copy = item.clone();
             copy.data = { isMandalaCopy: true, mandalaSource: item };
             copy.selected = false;
 
-            if (this.mirror && i % 2 === 1) {
-                // Odd sector: reflect across the first sector boundary, then rotate
+            if (this.mirror) {
+                // Flip across horizontal axis through center, then rotate to position
                 copy.translate(this.center.negate());
-                copy.rotate(-angleStep, origin);
                 copy.scale(1, -1, origin);
-                copy.rotate(angleStep, origin);
                 copy.translate(this.center);
-                if (i > 1) copy.rotate((i - 1) * angleStep, this.center);
-            } else if (i > 0) {
-                // Even sector (or no mirror): pure rotation
+            }
+            if (i > 0) {
                 copy.rotate(angleStep * i, this.center);
             }
 
