@@ -67,12 +67,19 @@ MB.Symmetry = {
         for (let li = 0; li < MB.Layers.layers.length; li++) {
             const layer = MB.Layers.layers[li];
             if (!layer.visible) continue;
-            // Snapshot children array to avoid mutation during iteration
             const kids = layer.paperLayer.children.slice();
             for (let ki = 0; ki < kids.length; ki++) {
                 const item = kids[ki];
-                if (item.data && item.data.isUserItem && item.data.symmetry) {
+                if (!item.data || !item.data.isUserItem) continue;
+                if (item.data.symmetry) {
                     this._rebuildForItem(item);
+                    // Hide original — only mirror copies visible
+                    item.visible = false;
+                    item.data._hiddenBySym = true;
+                } else if (item.data._hiddenBySym) {
+                    // Symmetry was removed — restore visibility
+                    item.visible = true;
+                    delete item.data._hiddenBySym;
                 }
             }
         }
@@ -173,12 +180,20 @@ MB.Symmetry = {
         // Clean up if nothing active
         if (!this.hasSymmetry(item)) {
             delete item.data.symmetry;
+            if (item.data._hiddenBySym) {
+                item.visible = true;
+                delete item.data._hiddenBySym;
+            }
         }
     },
 
     removeSymmetry(item) {
         if (item && item.data) {
             delete item.data.symmetry;
+            if (item.data._hiddenBySym) {
+                item.visible = true;
+                delete item.data._hiddenBySym;
+            }
         }
     },
 
@@ -256,8 +271,10 @@ MB.Symmetry = {
                 }
             }
 
-            // Remove symmetry from original
+            // Remove symmetry from original, restore visibility
             delete item.data.symmetry;
+            item.visible = true;
+            delete item.data._hiddenBySym;
         }
 
         MB.App.emit('selection-changed', MB.App.selectedItems);
