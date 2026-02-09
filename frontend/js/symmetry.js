@@ -72,6 +72,8 @@ MB.Symmetry = {
                 const item = kids[ki];
                 if (!item.data || !item.data.isUserItem) continue;
                 if (item.data.symmetry) {
+                    // Temporarily restore visibility so clone() copies are visible
+                    item.visible = true;
                     this._rebuildForItem(item);
                     // Hide original — only mirror copies visible
                     item.visible = false;
