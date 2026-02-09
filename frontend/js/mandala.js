@@ -43,6 +43,25 @@ MB.Mandala = {
         this._tool.name = 'mandala';
 
         this._tool.onMouseDown = (event) => {
+            // If clicking on an existing user object, select it and switch to select tool
+            const hitResult = paper.project.hitTest(event.point, {
+                fill: true, stroke: true, segments: false,
+                tolerance: 5 / paper.view.zoom
+            });
+            if (hitResult && hitResult.item) {
+                let topItem = null;
+                let check = hitResult.item;
+                while (check && check !== check.layer) {
+                    if (check.data && check.data.isUserItem) topItem = check;
+                    check = check.parent;
+                }
+                if (topItem) {
+                    MB.App.select(topItem);
+                    MB.App.setTool('select');
+                    return;
+                }
+            }
+
             const point = MB.GridSnap.snap(event.point, event);
             this.setCenter(point);
             // Auto-switch to select tool so user can start drawing immediately
@@ -433,6 +452,12 @@ MB.Mandala = {
 // Register mandala as a tool
 MB.App.registerTool('mandala', {
     activate() {
+        if (MB.Mandala.active) {
+            // Already active — toggle off and return to select
+            MB.Mandala.toggleActive();
+            setTimeout(() => MB.App.setTool('select'), 0);
+            return;
+        }
         MB.Mandala.activate();
     },
     deactivate() {
