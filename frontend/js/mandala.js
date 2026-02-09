@@ -185,13 +185,19 @@ MB.Mandala = {
                 copy.data = { isUserItem: true };
                 copy.selected = false;
 
-                if (this.mirror) {
-                    // Flip across horizontal axis through center, then rotate
-                    copy.translate(this.center.negate());
-                    copy.scale(1, -1, origin);
-                    copy.translate(this.center);
-                }
+                // Step 1: Rotate to evenly-spaced position
                 copy.rotate(angleStep * i, this.center);
+
+                // Step 2: Flip in place across the radial direction (if mirror)
+                if (this.mirror) {
+                    const angle = angleStep * i;
+                    const cc = copy.bounds.center;
+                    copy.translate(cc.negate());
+                    copy.rotate(-angle, origin);
+                    copy.scale(1, -1, origin);
+                    copy.rotate(angle, origin);
+                    copy.translate(cc);
+                }
 
                 allItems.push(copy);
             }
@@ -248,21 +254,28 @@ MB.Mandala = {
         const startI = wasHidden ? 0 : 1;
 
         // Single loop: exactly `segments` elements total (including original at i=0).
-        // Mirror flips each copy across horizontal axis through center (changes
-        // orientation but keeps copies evenly spaced at angleStep intervals).
+        // All copies are positioned by pure rotation (evenly spaced).
+        // Mirror flips each copy IN PLACE across its radial direction,
+        // preserving position but changing orientation.
         for (let i = startI; i < this.segments; i++) {
             const copy = item.clone();
             copy.data = { isMandalaCopy: true, mandalaSource: item };
             copy.selected = false;
 
-            if (this.mirror) {
-                // Flip across horizontal axis through center, then rotate to position
-                copy.translate(this.center.negate());
-                copy.scale(1, -1, origin);
-                copy.translate(this.center);
-            }
+            // Step 1: Rotate to evenly-spaced position
             if (i > 0) {
                 copy.rotate(angleStep * i, this.center);
+            }
+
+            // Step 2: Flip in place across the radial direction (if mirror)
+            if (this.mirror) {
+                const angle = angleStep * i;
+                const cc = copy.bounds.center;
+                copy.translate(cc.negate());
+                copy.rotate(-angle, origin);
+                copy.scale(1, -1, origin);
+                copy.rotate(angle, origin);
+                copy.translate(cc);
             }
 
             this._mirrorLayer.addChild(copy);
