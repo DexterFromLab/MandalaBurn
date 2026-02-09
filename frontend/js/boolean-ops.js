@@ -19,7 +19,35 @@ MB.BooleanOps = {
         }
         // Flatten parametric shapes before boolean operations
         if (MB.Parametric) MB.Parametric.flattenAll(paths);
+        // Resolve self-intersecting paths (spirographs, lissajous, etc.)
+        this._resolveSelfIntersections(paths);
         return paths;
+    },
+
+    _resolveSelfIntersections(paths) {
+        for (let i = 0; i < paths.length; i++) {
+            const p = paths[i];
+            if (!(p instanceof paper.Path) || !p.closed) continue;
+            const ix = p.getIntersections();
+            if (ix.length === 0) continue;
+            // Unite path with itself to resolve crossings into clean outline
+            const clone = p.clone();
+            clone.visible = false;
+            const resolved = p.unite(clone);
+            clone.remove();
+            if (resolved && resolved !== p) {
+                resolved.data = { ...p.data };
+                resolved.strokeColor = p.strokeColor;
+                resolved.strokeWidth = p.strokeWidth;
+                resolved.fillColor = p.fillColor;
+                resolved.insertAbove(p);
+                // Update selection reference
+                const selIdx = MB.App.selectedItems.indexOf(p);
+                if (selIdx >= 0) MB.App.selectedItems[selIdx] = resolved;
+                p.remove();
+                paths[i] = resolved;
+            }
+        }
     },
 
     _executeOp(operation, name, base, others) {
