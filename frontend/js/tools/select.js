@@ -324,11 +324,24 @@
             // Walk up parent chain for CompoundPath/Group children
             let dblItem = dblHit ? dblHit.item : null;
             if (dblItem && !(dblItem.data && dblItem.data.isUserItem)) {
-                while (dblItem && dblItem.parent && dblItem.parent !== dblItem.layer) {
-                    dblItem = dblItem.parent;
-                    if (dblItem.data && dblItem.data.isUserItem) break;
+                // Check symmetry proxy first
+                let check = dblItem;
+                while (check) {
+                    if (check.data && check.data.symmetryOriginal) {
+                        dblItem = check.data.symmetryOriginal;
+                        break;
+                    }
+                    if (check === check.layer) { check = null; break; }
+                    check = check.parent;
                 }
-                if (!(dblItem && dblItem.data && dblItem.data.isUserItem)) dblItem = null;
+                // If not a symmetry proxy, walk for isUserItem
+                if (!check) {
+                    while (dblItem && dblItem.parent && dblItem.parent !== dblItem.layer) {
+                        dblItem = dblItem.parent;
+                        if (dblItem.data && dblItem.data.isUserItem) break;
+                    }
+                    if (!(dblItem && dblItem.data && dblItem.data.isUserItem)) dblItem = null;
+                }
             }
             if (dblItem) {
                 const item = dblItem;
@@ -404,6 +417,19 @@
                 current = current.parent;
             }
             hitItem = topItem;
+        }
+
+        // Symmetry proxy: clicking mirror copy selects the original
+        if (!hitItem && hitResult && hitResult.item) {
+            let check = hitResult.item;
+            while (check) {
+                if (check.data && check.data.symmetryOriginal) {
+                    hitItem = check.data.symmetryOriginal;
+                    break;
+                }
+                if (check === check.layer) break;
+                check = check.parent;
+            }
         }
 
         if (hitItem) {

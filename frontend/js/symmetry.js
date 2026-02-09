@@ -5,9 +5,8 @@ MB.Symmetry = {
     _lastSelKey: '',
 
     init() {
-        // Create ephemeral layer for symmetry copies (locked = not selectable)
+        // Create ephemeral layer for symmetry copies (unlocked for hit-test proxy)
         this._symmetryLayer = new paper.Layer({ name: 'symmetry-mirrors' });
-        this._symmetryLayer.locked = true;
         this._symmetryLayer.visible = true;
 
         // Reactivate user layer
@@ -74,10 +73,16 @@ MB.Symmetry = {
                 if (item.data.symmetry) {
                     // Temporarily restore visibility so clone() copies are visible
                     item.visible = true;
-                    this._rebuildForItem(item);
+                    const copies = this._rebuildForItem(item);
                     // Hide original — only mirror copies visible
                     item.visible = false;
                     item.data._hiddenBySym = true;
+                    // Propagate selection to mirror copies
+                    const isSelected = MB.App.selectedItems.includes(item);
+                    item.selected = false; // No selection highlight on hidden original
+                    if (isSelected) {
+                        copies.forEach(c => { c.selected = true; });
+                    }
                 } else if (item.data._hiddenBySym) {
                     // Symmetry was removed — restore visibility
                     item.visible = true;
@@ -89,21 +94,30 @@ MB.Symmetry = {
 
     _rebuildForItem(item) {
         const sym = item.data.symmetry;
-        if (!sym) return;
+        if (!sym) return [];
 
         const center = item.bounds.center;
         const axisAngle = sym.axisAngle || 0;
         const origin = new paper.Point(0, 0);
+        const allCopies = [];
+        const copyData = { isSymmetryCopy: true, symmetryOriginal: item };
+
+        // Helper: create a clone linked back to original
+        const makeClone = () => {
+            const c = item.clone();
+            c.data = { isSymmetryCopy: true, symmetryOriginal: item };
+            c.selected = false;
+            this._symmetryLayer.addChild(c);
+            allCopies.push(c);
+            return c;
+        };
 
         // Collect mirror copies (sources for rotational step)
         const mirrorCopies = [];
 
         // Mirror H: flip across vertical axis (left-right)
         if (sym.mirrorH) {
-            const mh = item.clone();
-            mh.data = {};
-            mh.selected = false;
-            this._symmetryLayer.addChild(mh);
+            const mh = makeClone();
             mh.translate(center.negate());
             mh.rotate(-axisAngle, origin);
             mh.scale(-1, 1, origin);
@@ -114,10 +128,7 @@ MB.Symmetry = {
 
         // Mirror V: flip across horizontal axis (top-bottom)
         if (sym.mirrorV) {
-            const mv = item.clone();
-            mv.data = {};
-            mv.selected = false;
-            this._symmetryLayer.addChild(mv);
+            const mv = makeClone();
             mv.translate(center.negate());
             mv.rotate(-axisAngle, origin);
             mv.scale(1, -1, origin);
@@ -128,10 +139,7 @@ MB.Symmetry = {
 
         // Mirror H+V combined (180-degree point symmetry)
         if (sym.mirrorH && sym.mirrorV) {
-            const mhv = item.clone();
-            mhv.data = {};
-            mhv.selected = false;
-            this._symmetryLayer.addChild(mhv);
+            const mhv = makeClone();
             mhv.translate(center.negate());
             mhv.rotate(-axisAngle, origin);
             mhv.scale(-1, -1, origin);
@@ -146,10 +154,7 @@ MB.Symmetry = {
 
             // Rotate the original (copies i=1..N-1)
             for (let i = 1; i < sym.rotational; i++) {
-                const rc = item.clone();
-                rc.data = {};
-                rc.selected = false;
-                this._symmetryLayer.addChild(rc);
+                const rc = makeClone();
                 rc.rotate(angleStep * i, center);
             }
 
@@ -157,13 +162,16 @@ MB.Symmetry = {
             for (const src of mirrorCopies) {
                 for (let i = 1; i < sym.rotational; i++) {
                     const rc = src.clone();
-                    rc.data = {};
+                    rc.data = { isSymmetryCopy: true, symmetryOriginal: item };
                     rc.selected = false;
                     this._symmetryLayer.addChild(rc);
                     rc.rotate(angleStep * i, center);
+                    allCopies.push(rc);
                 }
             }
         }
+
+        return allCopies;
     },
 
     // --- API ---
