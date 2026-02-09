@@ -185,7 +185,8 @@
     function captureItemStates() {
         return MB.App.selectedItems.map(item => ({
             position: item.position.clone(),
-            bounds: item.bounds.clone()
+            bounds: item.bounds.clone(),
+            matrix: item.matrix.clone()
         }));
     }
 
@@ -396,14 +397,10 @@
                 deltaAngle = Math.round(deltaAngle / 15) * 15;
             }
 
-            // Restore original state and apply new rotation
+            // Restore original matrix and apply new rotation
             items.forEach((item, i) => {
                 const orig = origItemStates[i];
-                item.position = orig.position;
-                // Reset bounds to original size
-                if (orig.bounds.width > 0 && item.bounds.width > 0) {
-                    item.scale(orig.bounds.width / item.bounds.width, orig.bounds.height / item.bounds.height);
-                }
+                item.matrix.set(orig.matrix);
             });
             items.forEach(item => {
                 item.rotate(deltaAngle, anchor);

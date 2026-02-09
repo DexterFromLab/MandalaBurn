@@ -16,7 +16,6 @@ MB.Symmetry = {
 
         this._wireUI();
         this._startLiveUpdate();
-        console.log('[Symmetry] init OK, layer:', this._symmetryLayer.name);
     },
 
     // --- Live Update Loop ---
@@ -331,7 +330,6 @@ MB.Symmetry = {
     },
 
     _updatePanel(items) {
-        console.log('[Symmetry] _updatePanel called, items:', items ? items.length : 'null');
         const mirrorH = document.getElementById('sym-mirror-h');
         const mirrorV = document.getElementById('sym-mirror-v');
         const rotInput = document.getElementById('sym-rotational');
