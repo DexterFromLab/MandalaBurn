@@ -229,7 +229,7 @@ MB.Mandala = {
 
     rebuildMirrors() {
         this._clearMirrors();
-        if (!this.active || !this.center) return;
+        if (!this.active || !this.center || this.segments <= 1) return;
 
         const angleStep = 360 / this.segments;
 
