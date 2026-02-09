@@ -92,11 +92,32 @@ MB.Symmetry = {
         }
     },
 
+    // Geometric centroid of segment points — stable under rotation
+    _itemCentroid(item) {
+        let sumX = 0, sumY = 0, count = 0;
+        const add = (it) => {
+            if (it instanceof paper.CompoundPath) {
+                it.children.forEach(c => add(c));
+            } else if (it instanceof paper.Group) {
+                it.children.forEach(c => add(c));
+            } else if (it instanceof paper.Path) {
+                for (let i = 0; i < it.segments.length; i++) {
+                    sumX += it.segments[i].point.x;
+                    sumY += it.segments[i].point.y;
+                    count++;
+                }
+            }
+        };
+        add(item);
+        return count > 0 ? new paper.Point(sumX / count, sumY / count) : item.bounds.center;
+    },
+
     _rebuildForItem(item) {
         const sym = item.data.symmetry;
         if (!sym) return [];
 
-        const center = item.bounds.center;
+        // Use centroid (NOT bounds.center) — centroid is invariant under rotation
+        const center = this._itemCentroid(item);
         const axisAngle = sym.axisAngle || 0;
         const origin = new paper.Point(0, 0);
         const allCopies = [];
@@ -193,7 +214,7 @@ MB.Symmetry = {
 
         for (const item of toFlatten) {
             const sym = item.data.symmetry;
-            const center = item.bounds.center;
+            const center = this._itemCentroid(item);
             const axisAngle = sym.axisAngle || 0;
             const origin = new paper.Point(0, 0);
             const layer = item.parent;

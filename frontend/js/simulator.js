@@ -45,6 +45,21 @@ MB.Simulator = {
             for (let pass = 1; pass <= passes; pass++) {
                 layer.paperLayer.children.forEach(item => {
                     if (!item.data || !item.data.isUserItem) return;
+
+                    // If item is hidden by symmetry, compile its mirror copies instead
+                    if (item.data._hiddenBySym && MB.Symmetry && MB.Symmetry._symmetryLayer) {
+                        MB.Symmetry._symmetryLayer.children.forEach(copy => {
+                            if (copy.data && copy.data.symmetryOriginal === item) {
+                                this._compileItem(copy, layer, ls, pass, passes, rapidSpeed, pos);
+                                if (this.commands.length > 0) {
+                                    const last = this.commands[this.commands.length - 1];
+                                    pos = { x: last.to.x, y: last.to.y };
+                                }
+                            }
+                        });
+                        return;
+                    }
+
                     this._compileItem(item, layer, ls, pass, passes, rapidSpeed, pos);
                     // Update pos to last command's endpoint
                     if (this.commands.length > 0) {

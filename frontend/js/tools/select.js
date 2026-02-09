@@ -387,24 +387,10 @@
                         bounds = bounds ? bounds.unite(item.bounds) : item.bounds.clone();
                     });
                     origBounds = bounds;
-                    // Default anchor = centroid of visible copies (or original if no symmetry)
+                    // Default anchor = centroid of original items
+                    // Centroid is stable under rotation (unlike bounds.center)
                     if (!anchorPoint) {
-                        // For items hidden by symmetry, use mirror copies' centroid
-                        if (MB.Symmetry && MB.Symmetry._symmetryLayer) {
-                            const copies = [];
-                            MB.Symmetry._symmetryLayer.children.forEach(c => {
-                                if (c.data && c.data.symmetryOriginal &&
-                                    MB.App.selectedItems.includes(c.data.symmetryOriginal)) {
-                                    copies.push(c);
-                                }
-                            });
-                            if (copies.length > 0) {
-                                anchorPoint = computeCentroid(copies);
-                            }
-                        }
-                        if (!anchorPoint) {
-                            anchorPoint = computeCentroid(MB.App.selectedItems) || bounds.center;
-                        }
+                        anchorPoint = computeCentroid(MB.App.selectedItems) || bounds.center;
                     }
                     dragStart = event.point;
                     origItemStates = captureItemStates();
