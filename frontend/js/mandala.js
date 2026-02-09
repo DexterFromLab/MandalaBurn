@@ -177,31 +177,28 @@ MB.Mandala = {
             }
             if (item.data.symmetry) delete item.data.symmetry;
 
-            allItems.push(item); // keep original
+            allItems.push(item); // keep original (sector 0)
 
-            // Rotated copies
+            const origin = new paper.Point(0, 0);
             for (let i = 1; i < this.segments; i++) {
                 const copy = item.clone();
                 copy.data = { isUserItem: true };
                 copy.selected = false;
-                copy.rotate(angleStep * i, this.center);
-                allItems.push(copy);
-            }
 
-            // Mirror copies
-            if (this.mirror) {
-                for (let i = 0; i < this.segments; i++) {
-                    const mc = item.clone();
-                    mc.data = { isUserItem: true };
-                    mc.selected = false;
-                    const refAngle = i * angleStep;
-                    mc.translate(this.center.negate());
-                    mc.rotate(-refAngle, new paper.Point(0, 0));
-                    mc.scale(1, -1, new paper.Point(0, 0));
-                    mc.rotate(refAngle, new paper.Point(0, 0));
-                    mc.translate(this.center);
-                    allItems.push(mc);
+                if (this.mirror && i % 2 === 1) {
+                    // Odd sector: reflect across first sector boundary, then rotate
+                    copy.translate(this.center.negate());
+                    copy.rotate(-angleStep, origin);
+                    copy.scale(1, -1, origin);
+                    copy.rotate(angleStep, origin);
+                    copy.translate(this.center);
+                    if (i > 1) copy.rotate((i - 1) * angleStep, this.center);
+                } else {
+                    // Even sector: pure rotation
+                    copy.rotate(angleStep * i, this.center);
                 }
+
+                allItems.push(copy);
             }
         }
 
@@ -252,33 +249,31 @@ MB.Mandala = {
         const wasHidden = !item.visible && item.data && item.data._hiddenBySym;
         if (wasHidden) item.visible = true;
 
-        // Rotated copies: start at i=0 when original is hidden (fill the gap),
-        // otherwise i=1 (original on user layer serves as i=0)
+        const origin = new paper.Point(0, 0);
         const startI = wasHidden ? 0 : 1;
+
+        // Single loop: exactly `segments` elements total (including original at i=0).
+        // With mirror: even i = rotated, odd i = reflected (kaleidoscope pattern).
+        // Without mirror: all copies are simple rotations.
         for (let i = startI; i < this.segments; i++) {
             const copy = item.clone();
             copy.data = { isMandalaCopy: true, mandalaSource: item };
             copy.selected = false;
-            if (i > 0) copy.rotate(angleStep * i, this.center);
-            this._mirrorLayer.addChild(copy);
-        }
 
-        // Mirror copies (one per segment)
-        if (this.mirror) {
-            for (let i = 0; i < this.segments; i++) {
-                const mc = item.clone();
-                mc.data = { isMandalaCopy: true, mandalaSource: item };
-                mc.selected = false;
-                const refAngle = i * angleStep;
-                // Reflect across radial line at refAngle:
-                // translate center to origin, rotate to align axis, flip, rotate back, translate back
-                mc.translate(this.center.negate());
-                mc.rotate(-refAngle, new paper.Point(0, 0));
-                mc.scale(1, -1, new paper.Point(0, 0));
-                mc.rotate(refAngle, new paper.Point(0, 0));
-                mc.translate(this.center);
-                this._mirrorLayer.addChild(mc);
+            if (this.mirror && i % 2 === 1) {
+                // Odd sector: reflect across the first sector boundary, then rotate
+                copy.translate(this.center.negate());
+                copy.rotate(-angleStep, origin);
+                copy.scale(1, -1, origin);
+                copy.rotate(angleStep, origin);
+                copy.translate(this.center);
+                if (i > 1) copy.rotate((i - 1) * angleStep, this.center);
+            } else if (i > 0) {
+                // Even sector (or no mirror): pure rotation
+                copy.rotate(angleStep * i, this.center);
             }
+
+            this._mirrorLayer.addChild(copy);
         }
 
         // Restore hidden state if item was hidden by symmetry
@@ -318,12 +313,10 @@ MB.Mandala = {
 
         const zoom = paper.view.zoom;
         const len = Math.max(MB.Canvas.wsWidth, MB.Canvas.wsHeight) * 1.5;
-        const totalSlices = this.mirror ? this.segments * 2 : this.segments;
-
-        // Radial guide lines
+        // Radial guide lines — one per segment
         if (this.showGuides) {
-            for (let i = 0; i < totalSlices; i++) {
-                const angle = (i / totalSlices) * 2 * Math.PI;
+            for (let i = 0; i < this.segments; i++) {
+                const angle = (i / this.segments) * 2 * Math.PI;
                 const isMirrorLine = this.mirror && (i % 2 === 1);
                 new paper.Path.Line({
                     from: this.center,
