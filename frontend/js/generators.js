@@ -108,17 +108,21 @@ MB.Generators = {
         const a = params.a || 3;
         const b = params.b || 2;
         const delta = (params.delta || 0) * Math.PI / 180;
-        const steps = 500;
+        const loops = params.loops || 1;
+        const totalAngle = loops * 2 * Math.PI;
+        const steps = Math.max(500, loops * 300);
 
         const path = new paper.Path();
         for (let i = 0; i < steps; i++) {
-            const t = (i / steps) * 2 * Math.PI;
+            const t = (i / steps) * totalAngle;
             const x = A * Math.sin(a * t + delta);
             const y = B * Math.sin(b * t);
             path.add(new paper.Point(x, y));
         }
-        path.closePath();
-        // no simplify — preserve exact math curve for laser precision
+        // Close only if endpoint is near start
+        const first = path.firstSegment.point;
+        const last = path.lastSegment.point;
+        if (first.getDistance(last) < 1) path.closePath();
         return path;
     },
 
@@ -253,9 +257,10 @@ MB.Generators = {
             case 'lissajous': return {
                 A: parseFloat(document.getElementById('gen-li-A').value) || 50,
                 B: parseFloat(document.getElementById('gen-li-B').value) || 50,
-                a: parseInt(document.getElementById('gen-li-a').value) || 3,
-                b: parseInt(document.getElementById('gen-li-b').value) || 2,
-                delta: parseInt(document.getElementById('gen-li-delta').value) || 0
+                a: parseFloat(document.getElementById('gen-li-a').value) || 3,
+                b: parseFloat(document.getElementById('gen-li-b').value) || 2,
+                delta: parseInt(document.getElementById('gen-li-delta').value) || 0,
+                loops: parseInt(document.getElementById('gen-li-loops').value) || 1
             };
             case 'harmonograph': return {
                 size: parseFloat(document.getElementById('gen-ha-size').value) || 50,
@@ -299,6 +304,7 @@ MB.Generators = {
                 document.getElementById('gen-li-b').value = params.b || 2;
                 document.getElementById('gen-li-delta').value = params.delta || 0;
                 document.getElementById('gen-li-delta-val').textContent = (params.delta || 0) + '\u00B0';
+                document.getElementById('gen-li-loops').value = params.loops || 1;
                 break;
             case 'harmonograph':
                 document.getElementById('gen-ha-size').value = params.size || 50;
@@ -359,7 +365,7 @@ MB.Generators = {
         const paramIds = [
             'gen-sp-R', 'gen-sp-r', 'gen-sp-d',
             'gen-rs-a', 'gen-rs-n', 'gen-rs-d',
-            'gen-li-A', 'gen-li-B', 'gen-li-a', 'gen-li-b', 'gen-li-delta',
+            'gen-li-A', 'gen-li-B', 'gen-li-a', 'gen-li-b', 'gen-li-delta', 'gen-li-loops',
             'gen-ha-size', 'gen-ha-fx', 'gen-ha-fy', 'gen-ha-px', 'gen-ha-py', 'gen-ha-decay',
             'gen-gu-R', 'gen-gu-r', 'gen-gu-d1', 'gen-gu-d2', 'gen-gu-lines'
         ];

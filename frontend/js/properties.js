@@ -171,6 +171,7 @@ MB.Properties = {
         this._wireParamInput('param-li-a', (item, val) => { item.data.shapeParams.a = Math.round(val); });
         this._wireParamInput('param-li-b', (item, val) => { item.data.shapeParams.b = Math.round(val); });
         this._wireParamInput('param-li-delta', (item, val) => { item.data.shapeParams.delta = val; });
+        this._wireParamInput('param-li-loops', (item, val) => { item.data.shapeParams.loops = Math.round(val); });
         this._wireParamInput('param-ha-size', (item, val) => { item.data.shapeParams.size = val; });
         this._wireParamInput('param-ha-fx', (item, val) => { item.data.shapeParams.freqX = val; });
         this._wireParamInput('param-ha-fy', (item, val) => { item.data.shapeParams.freqY = val; });
@@ -496,6 +497,7 @@ MB.Properties = {
                 this._setVal('param-li-a', params.a);
                 this._setVal('param-li-b', params.b);
                 this._setVal('param-li-delta', params.delta);
+                this._setVal('param-li-loops', params.loops);
                 break;
             case 'harmonograph':
                 this._setVal('param-ha-size', params.size);
