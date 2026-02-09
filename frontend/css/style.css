@@ -977,6 +977,12 @@ input[type="color"]::-webkit-color-swatch { border: 1px solid var(--border); bor
     text-align: center;
     flex-shrink: 0;
 }
+.obj-item .obj-sym-badge {
+    font-size: 9px;
+    color: var(--accent);
+    flex-shrink: 0;
+    margin-left: 1px;
+}
 .obj-item .obj-name {
     flex: 1;
     overflow: hidden;

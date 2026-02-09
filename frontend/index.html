@@ -491,6 +491,47 @@
                 </div>
             </div>
 
+            <!-- Symmetry Modifier -->
+            <div class="panel-section collapsed" id="symmetry-panel">
+                <div class="panel-header collapsible">Symmetry<span class="collapse-arrow"></span></div>
+                <div class="panel-body">
+                    <div class="prop-row">
+                        <label><input type="checkbox" id="sym-mirror-h" disabled> Mirror H</label>
+                    </div>
+                    <div class="prop-row">
+                        <label><input type="checkbox" id="sym-mirror-v" disabled> Mirror V</label>
+                    </div>
+                    <div class="prop-row">
+                        <label>Rotational</label>
+                        <input type="number" id="sym-rotational" value="0" min="0" max="64" step="1" style="width:50px" disabled>
+                    </div>
+                    <div class="prop-row">
+                        <div class="btn-group" id="sym-rot-presets">
+                            <button class="bg-btn active" data-val="0">Off</button>
+                            <button class="bg-btn" data-val="2">2</button>
+                            <button class="bg-btn" data-val="3">3</button>
+                            <button class="bg-btn" data-val="4">4</button>
+                            <button class="bg-btn" data-val="6">6</button>
+                            <button class="bg-btn" data-val="8">8</button>
+                        </div>
+                    </div>
+                    <div class="prop-row">
+                        <label>Axis</label>
+                        <input type="number" id="sym-axis-angle" value="0" min="-180" max="180" step="5" style="width:55px" disabled>
+                        <span>&deg;</span>
+                    </div>
+                    <div class="prop-row" style="margin-top:4px">
+                        <button class="to-btn" id="sym-flatten-btn" style="background:var(--accent);color:white" disabled>&#x2B07; Flatten symmetry</button>
+                    </div>
+                    <div class="prop-row" style="margin-top:2px">
+                        <button class="to-btn" id="sym-remove-btn" disabled>Remove symmetry</button>
+                    </div>
+                    <div class="prop-row" style="font-size:10px;color:var(--text-muted)">
+                        Per-object symmetry. Copies are live until flattened.
+                    </div>
+                </div>
+            </div>
+
             <!-- Laser Settings -->
             <div class="panel-section collapsed" id="laser-settings">
                 <div class="panel-header collapsible">Laser Settings<span class="collapse-arrow"></span></div>
@@ -849,6 +890,7 @@
         <button data-action="ungroup">Ungroup<span class="shortcut">Ctrl+Shift+G</span></button>
         <div class="menu-separator"></div>
         <button data-action="flatten-to-path">&rarr; Convert to Path</button>
+        <button data-action="flatten-symmetry">&rarr; Flatten Symmetry</button>
         <div class="menu-separator"></div>
         <button data-action="delete-selected">Delete<span class="shortcut">Del</span></button>
     </div>
@@ -979,6 +1021,7 @@
     <script src="/js/tools/text.js"></script>
     <script src="/js/simulator.js"></script>
     <script src="/js/mandala.js"></script>
+    <script src="/js/symmetry.js"></script>
     <script src="/js/align.js"></script>
     <script src="/js/gcode.js"></script>
     <script src="/js/job-sender.js"></script>

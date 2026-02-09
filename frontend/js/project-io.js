@@ -163,9 +163,12 @@ MB.ProjectIO = {
         // Temporarily hide non-user items
         const bgLayer = MB.Canvas.bgLayer;
         bgLayer.visible = false;
+        const symLayer = MB.Symmetry && MB.Symmetry._symmetryLayer;
+        if (symLayer) symLayer.visible = false;
 
         const svg = paper.project.exportSVG({ asString: true });
         bgLayer.visible = true;
+        if (symLayer) symLayer.visible = true;
 
         const blob = new Blob([svg], { type: 'image/svg+xml' });
         const url = URL.createObjectURL(blob);

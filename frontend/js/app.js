@@ -32,6 +32,7 @@ MB.App = {
         MB.ProjectIO.init();
         MB.FontManager.init();
         MB.Mandala.init();
+        MB.Symmetry.init();
         MB.Simulator.init();
         MB.ArrayPattern.init();
         MB.PathOffset.init();
@@ -469,6 +470,8 @@ MB.App = {
         if (ungroupBtn) ungroupBtn.disabled = !(items.length === 1 && items[0] instanceof paper.Group);
         if (flattenBtn) flattenBtn.disabled = !(items.length === 1 && MB.Parametric && MB.Parametric.isParametric(items[0]));
         if (deleteBtn) deleteBtn.disabled = items.length === 0;
+        const symFlattenBtn = menu.querySelector('[data-action="flatten-symmetry"]');
+        if (symFlattenBtn) symFlattenBtn.disabled = !items.some(i => MB.Symmetry && MB.Symmetry.hasSymmetry(i));
 
         // Position menu
         menu.style.left = clientX + 'px';
@@ -514,6 +517,9 @@ MB.App = {
                         MB.Parametric.flatten(this.selectedItems[0]);
                         this.emit('selection-changed', this.selectedItems);
                     }
+                    break;
+                case 'flatten-symmetry':
+                    if (MB.Symmetry) MB.Symmetry.flatten(this.selectedItems);
                     break;
                 case 'delete-selected': this.deleteSelected(); break;
             }

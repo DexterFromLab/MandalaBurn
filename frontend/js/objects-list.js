@@ -108,6 +108,15 @@ MB.ObjectsList = {
             icon.textContent = this._getIcon(item);
             div.appendChild(icon);
 
+            // Symmetry badge
+            if (MB.Symmetry && MB.Symmetry.hasSymmetry(item)) {
+                const symBadge = document.createElement('span');
+                symBadge.className = 'obj-sym-badge';
+                symBadge.textContent = '\u29BF';
+                symBadge.title = 'Has symmetry modifier';
+                div.appendChild(symBadge);
+            }
+
             // Name
             const name = document.createElement('span');
             name.className = 'obj-name';
