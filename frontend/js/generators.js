@@ -5,6 +5,8 @@ function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
 
 MB.Generators = {
     _currentType: 'spirograph',
+    _liveItem: null,        // currently live-edited item
+    _snapshotDone: false,   // history snapshot taken for this editing session
 
     _presets: {
         spirograph: {
@@ -182,7 +184,23 @@ MB.Generators = {
         const builder = MB.Parametric._builders[type];
         if (!builder) return;
 
+        // Check if we can update existing live item in-place
+        if (this._liveItem && this._liveItem.parent && this._liveItem.data &&
+            this._liveItem.data.shapeType === type) {
+            // Snapshot once per editing session
+            if (!this._snapshotDone) {
+                MB.History.snapshot();
+                this._snapshotDone = true;
+            }
+            this._liveItem.data.shapeParams = { ...params };
+            MB.Parametric.regenerate(this._liveItem);
+            paper.view.update();
+            return;
+        }
+
+        // Create new item
         MB.History.snapshot();
+        this._snapshotDone = true;
         layer.paperLayer.activate();
 
         const path = builder(params);
@@ -203,10 +221,17 @@ MB.Generators = {
             shapeParams: { ...params }
         };
 
+        this._liveItem = path;
         MB.App.select(path);
         document.getElementById('status-info').textContent =
             type.charAt(0).toUpperCase() + type.slice(1) +
             ' generated (' + path.segments.length + ' pts)';
+    },
+
+    // Reset live item (new editing session on next change)
+    _resetLive() {
+        this._liveItem = null;
+        this._snapshotDone = false;
     },
 
     // --- Read params from UI ---
@@ -303,25 +328,48 @@ MB.Generators = {
 
         if (!typeSelect || !presetSelect || !generateBtn) return;
 
-        // Type selector
+        // Type selector — switching type starts a new item
         typeSelect.addEventListener('change', () => {
             this._currentType = typeSelect.value;
             this._showParamsForType(this._currentType);
             this._populatePresets(this._currentType);
+            this._resetLive();
+            this.generate();
         });
 
-        // Preset selector
+        // Preset selector — apply and regenerate
         presetSelect.addEventListener('change', () => {
             const name = presetSelect.value;
             if (!name) return;
             const presets = this._presets[this._currentType];
             if (presets && presets[name]) {
                 this._applyParamsToUI(presets[name]);
+                this.generate();
             }
         });
 
-        // Generate button
-        generateBtn.addEventListener('click', () => this.generate());
+        // Generate button — force new item
+        generateBtn.addEventListener('click', () => {
+            this._resetLive();
+            this.generate();
+        });
+
+        // Live regenerate on any param input change
+        const liveRegen = () => this.generate();
+        const paramIds = [
+            'gen-sp-R', 'gen-sp-r', 'gen-sp-d',
+            'gen-rs-a', 'gen-rs-n', 'gen-rs-d',
+            'gen-li-A', 'gen-li-B', 'gen-li-a', 'gen-li-b', 'gen-li-delta',
+            'gen-ha-size', 'gen-ha-fx', 'gen-ha-fy', 'gen-ha-px', 'gen-ha-py', 'gen-ha-decay',
+            'gen-gu-R', 'gen-gu-r', 'gen-gu-d1', 'gen-gu-d2', 'gen-gu-lines'
+        ];
+        paramIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', liveRegen);
+        });
+        // Checkbox
+        const epiCb = document.getElementById('gen-sp-epi');
+        if (epiCb) epiCb.addEventListener('change', liveRegen);
 
         // Range slider live labels
         const deltaSlider = document.getElementById('gen-li-delta');
@@ -337,6 +385,13 @@ MB.Generators = {
                     parseFloat(decaySlider.value).toFixed(3);
             });
         }
+
+        // Reset snapshot flag when slider drag ends (next drag = new undo point)
+        const rangeIds = ['gen-li-delta', 'gen-ha-decay'];
+        rangeIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', () => { this._snapshotDone = false; });
+        });
 
         // Initial state
         this._showParamsForType('spirograph');
