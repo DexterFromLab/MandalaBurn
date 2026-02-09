@@ -62,7 +62,7 @@ MB.Generators = {
         const steps = Math.max(500, revolutions * 100);
 
         const path = new paper.Path();
-        for (let i = 0; i <= steps; i++) {
+        for (let i = 0; i < steps; i++) {
             const t = (i / steps) * totalAngle;
             let x, y;
             if (epi) {
@@ -91,7 +91,7 @@ MB.Generators = {
         const steps = Math.max(300, denom * 200);
 
         const path = new paper.Path();
-        for (let i = 0; i <= steps; i++) {
+        for (let i = 0; i < steps; i++) {
             const theta = (i / steps) * totalAngle;
             const r = a * Math.cos(k * theta);
             const x = r * Math.cos(theta);
@@ -112,7 +112,7 @@ MB.Generators = {
         const steps = 500;
 
         const path = new paper.Path();
-        for (let i = 0; i <= steps; i++) {
+        for (let i = 0; i < steps; i++) {
             const t = (i / steps) * 2 * Math.PI;
             const x = A * Math.sin(a * t + delta);
             const y = B * Math.sin(b * t);
@@ -137,6 +137,7 @@ MB.Generators = {
         for (let i = 0; i <= steps; i++) {
             const t = (i / steps) * duration;
             const damp = Math.exp(-decay * t);
+            if (damp < 0.001) break; // stop when amplitude is negligible
             const x = size * Math.sin(fx * t + px) * damp;
             const y = size * Math.sin(fy * t + py) * damp;
             path.add(new paper.Point(x, y));
@@ -161,7 +162,7 @@ MB.Generators = {
 
         // Weave between inner (d1) and outer (d2) spirograph curves
         const path = new paper.Path();
-        for (let i = 0; i <= nLines; i++) {
+        for (let i = 0; i < nLines; i++) {
             const t = (i / nLines) * totalAngle;
             const d = (i % 2 === 0) ? d1 : d2;
             const x = (R - r) * Math.cos(t) + d * Math.cos(((R - r) / r) * t);
