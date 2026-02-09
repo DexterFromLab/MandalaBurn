@@ -191,7 +191,34 @@ MB.BooleanOps = {
         dialog.classList.remove('hidden');
     },
 
-    unite() { this._operate('unite', 'Unite'); },
+    unite() {
+        const items = MB.App.selectedItems.slice();
+        // Single item: resolve self-intersections / flatten group to outline
+        if (items.length === 1) {
+            const item = items[0];
+            if (!(item instanceof paper.Path || item instanceof paper.CompoundPath || item instanceof paper.Group)) {
+                document.getElementById('status-info').textContent = 'Selected object must be a path or group';
+                return;
+            }
+            if (MB.Parametric) MB.Parametric.flattenAll(items);
+            MB.History.snapshot();
+            const resolved = this._itemToPath(item);
+            if (resolved && resolved !== item) {
+                const layer = MB.Layers.getActiveLayer();
+                resolved.strokeColor = layer ? layer.color : resolved.strokeColor;
+                resolved.strokeWidth = 0.5;
+                resolved.fillColor = null;
+                resolved.data = { isUserItem: true };
+                MB.App.select(resolved);
+                document.getElementById('status-info').textContent = 'Unite: outline resolved (' +
+                    (resolved.segments ? resolved.segments.length : '?') + ' pts)';
+            } else {
+                document.getElementById('status-info').textContent = 'No self-intersections to resolve';
+            }
+            return;
+        }
+        this._operate('unite', 'Unite');
+    },
     intersect() { this._operate('intersect', 'Intersect'); },
     exclude() { this._operate('exclude', 'Exclude'); },
     divide() { this._operate('divide', 'Divide'); }
