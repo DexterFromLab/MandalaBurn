@@ -728,15 +728,35 @@
         activate() {
             tool.activate();
             MB.App.on('view-changed', onViewChanged);
-            if (MB.App.selectedItems.length === 1 && MB.App.selectedItems[0] instanceof paper.Path) {
-                selectedPath = MB.App.selectedItems[0];
+            if (MB.App.selectedItems.length === 1) {
+                let item = MB.App.selectedItems[0];
                 // Auto-flatten parametric shapes when entering node edit
-                if (MB.Parametric && MB.Parametric.isParametric(selectedPath)) {
-                    MB.Parametric.flatten(selectedPath);
+                if (MB.Parametric && MB.Parametric.isParametric(item)) {
+                    MB.Parametric.flatten(item);
+                }
+                // Convert CompoundPath to Path for node editing
+                if (item instanceof paper.CompoundPath) {
+                    MB.History.snapshot();
+                    const path = new paper.Path();
+                    item.children.slice().forEach(child => {
+                        child.segments.forEach(seg => path.add(seg.clone()));
+                        if (child.closed && path.segments.length > 0) path.closePath();
+                    });
+                    path.strokeColor = item.strokeColor;
+                    path.strokeWidth = item.strokeWidth;
+                    path.fillColor = item.fillColor;
+                    path.data = { ...item.data, isUserItem: true };
+                    path.insertAbove(item);
+                    item.remove();
+                    MB.App.selectedItems[0] = path;
+                    item = path;
                     MB.App.emit('selection-changed', MB.App.selectedItems);
                 }
-                initSegmentTypes(selectedPath);
-                drawNodes(selectedPath);
+                if (item instanceof paper.Path) {
+                    selectedPath = item;
+                    initSegmentTypes(selectedPath);
+                    drawNodes(selectedPath);
+                }
             }
             updateInfo();
             updateButtons();
