@@ -160,21 +160,23 @@ MB.ProjectIO = {
 
     // --- SVG Export ---
     exportSVG() {
-        // Temporarily hide non-user items
+        // Force ephemeral layers to be up-to-date
+        if (MB.Symmetry) try { MB.Symmetry.rebuildAll(); } catch (e) {}
+        if (MB.Mandala && MB.Mandala.active) try { MB.Mandala.rebuildMirrors(); } catch (e) {}
+
+        // Hide non-visual layers (bg, grid, mandala guides, simulator)
         const bgLayer = MB.Canvas.bgLayer;
         bgLayer.visible = false;
-        const symLayer = MB.Symmetry && MB.Symmetry._symmetryLayer;
-        if (symLayer) symLayer.visible = false;
         const mandalaGuides = MB.Mandala && MB.Mandala._guideLayer;
-        const mandalaMirrors = MB.Mandala && MB.Mandala._mirrorLayer;
         if (mandalaGuides) mandalaGuides.visible = false;
-        if (mandalaMirrors) mandalaMirrors.visible = false;
+        const simLayer = MB.Simulator && MB.Simulator.simLayer;
+        if (simLayer) simLayer.visible = false;
+        // Keep symmetry layer visible — contains correct visual for symmetry items
+        // Keep mandala mirror layer visible — contains rotated copies
 
         const svg = paper.project.exportSVG({ asString: true });
         bgLayer.visible = true;
-        if (symLayer) symLayer.visible = true;
-        if (mandalaGuides && MB.Mandala.active) mandalaGuides.visible = true;
-        if (mandalaMirrors && MB.Mandala.active) mandalaMirrors.visible = true;
+        if (mandalaGuides && MB.Mandala && MB.Mandala.active) mandalaGuides.visible = true;
 
         const blob = new Blob([svg], { type: 'image/svg+xml' });
         const url = URL.createObjectURL(blob);
