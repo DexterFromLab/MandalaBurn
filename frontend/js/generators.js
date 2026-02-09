@@ -75,7 +75,6 @@ MB.Generators = {
             path.add(new paper.Point(x, y));
         }
         path.closePath();
-        path.simplify(0.5);
         return path;
     },
 
@@ -99,7 +98,7 @@ MB.Generators = {
             path.add(new paper.Point(x, y));
         }
         path.closePath();
-        path.simplify(0.3);
+        // no simplify — preserve exact math curve for laser precision
         return path;
     },
 
@@ -119,7 +118,7 @@ MB.Generators = {
             path.add(new paper.Point(x, y));
         }
         path.closePath();
-        path.simplify(0.3);
+        // no simplify — preserve exact math curve for laser precision
         return path;
     },
 
@@ -143,7 +142,7 @@ MB.Generators = {
             path.add(new paper.Point(x, y));
         }
         // Harmonograph doesn't close — spirals inward
-        path.simplify(0.3);
+        // no simplify — preserve exact math curve for laser precision
         return path;
     },
 
@@ -170,7 +169,7 @@ MB.Generators = {
             path.add(new paper.Point(x, y));
         }
         path.closePath();
-        path.simplify(0.5);
+        // no simplify — preserve exact math curve for laser precision
         return path;
     },
 
