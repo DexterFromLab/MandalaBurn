@@ -46,8 +46,8 @@ MB.Simulator = {
                 layer.paperLayer.children.forEach(item => {
                     if (!item.data || !item.data.isUserItem) return;
 
-                    // If item is hidden by symmetry, compile its mirror copies instead
-                    if (item.data._hiddenBySym && MB.Symmetry && MB.Symmetry._symmetryLayer) {
+                    // If item has symmetry modifier, compile mirror copies instead of hidden original
+                    if (item.data.symmetry && MB.Symmetry && MB.Symmetry.hasSymmetry(item) && MB.Symmetry._symmetryLayer) {
                         MB.Symmetry._symmetryLayer.children.forEach(copy => {
                             if (copy.data && copy.data.symmetryOriginal === item) {
                                 this._compileItem(copy, layer, ls, pass, passes, rapidSpeed, pos);
@@ -65,6 +65,19 @@ MB.Simulator = {
                     if (this.commands.length > 0) {
                         const last = this.commands[this.commands.length - 1];
                         pos = { x: last.to.x, y: last.to.y };
+                    }
+
+                    // If mandala is active, also compile this item's mandala copies
+                    if (MB.Mandala && MB.Mandala.active && MB.Mandala._mirrorLayer) {
+                        MB.Mandala._mirrorLayer.children.forEach(copy => {
+                            if (copy.data && copy.data.mandalaSource === item) {
+                                this._compileItem(copy, layer, ls, pass, passes, rapidSpeed, pos);
+                                if (this.commands.length > 0) {
+                                    const last = this.commands[this.commands.length - 1];
+                                    pos = { x: last.to.x, y: last.to.y };
+                                }
+                            }
+                        });
                     }
                 });
             }

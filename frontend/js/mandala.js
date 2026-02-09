@@ -225,7 +225,7 @@ MB.Mandala = {
         // Rotated copies (i=0 is the original on the user layer, skip it)
         for (let i = 1; i < this.segments; i++) {
             const copy = item.clone();
-            copy.data = {};
+            copy.data = { isMandalaCopy: true, mandalaSource: item };
             copy.selected = false;
             copy.rotate(angleStep * i, this.center);
             this._mirrorLayer.addChild(copy);
@@ -235,7 +235,7 @@ MB.Mandala = {
         if (this.mirror) {
             for (let i = 0; i < this.segments; i++) {
                 const mc = item.clone();
-                mc.data = {};
+                mc.data = { isMandalaCopy: true, mandalaSource: item };
                 mc.selected = false;
                 const refAngle = i * angleStep;
                 // Reflect across radial line at refAngle:

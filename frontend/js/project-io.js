@@ -165,10 +165,16 @@ MB.ProjectIO = {
         bgLayer.visible = false;
         const symLayer = MB.Symmetry && MB.Symmetry._symmetryLayer;
         if (symLayer) symLayer.visible = false;
+        const mandalaGuides = MB.Mandala && MB.Mandala._guideLayer;
+        const mandalaMirrors = MB.Mandala && MB.Mandala._mirrorLayer;
+        if (mandalaGuides) mandalaGuides.visible = false;
+        if (mandalaMirrors) mandalaMirrors.visible = false;
 
         const svg = paper.project.exportSVG({ asString: true });
         bgLayer.visible = true;
         if (symLayer) symLayer.visible = true;
+        if (mandalaGuides && MB.Mandala.active) mandalaGuides.visible = true;
+        if (mandalaMirrors && MB.Mandala.active) mandalaMirrors.visible = true;
 
         const blob = new Blob([svg], { type: 'image/svg+xml' });
         const url = URL.createObjectURL(blob);
