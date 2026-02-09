@@ -7,30 +7,82 @@ MB.BooleanOps = {
     },
 
     _getValidPaths() {
-        const items = MB.App.selectedItems;
+        const items = MB.App.selectedItems.slice();
         if (items.length < 2) {
             document.getElementById('status-info').textContent = 'Select at least 2 objects';
             return null;
         }
-        const paths = items.filter(item => item instanceof paper.Path || item instanceof paper.CompoundPath);
+
+        // Flatten parametric shapes before boolean operations
+        if (MB.Parametric) MB.Parametric.flattenAll(items);
+
+        // Convert Groups to single paths by uniting their children
+        const paths = [];
+        for (const item of items) {
+            const converted = this._itemToPath(item);
+            if (converted) paths.push(converted);
+        }
+
         if (paths.length < 2) {
-            document.getElementById('status-info').textContent = 'Selected objects must be paths';
+            document.getElementById('status-info').textContent = 'Select at least 2 path objects';
             return null;
         }
-        // Flatten parametric shapes before boolean operations
-        if (MB.Parametric) MB.Parametric.flattenAll(paths);
-        // Resolve self-intersecting paths (spirographs, lissajous, etc.)
-        this._resolveSelfIntersections(paths);
         return paths;
     },
 
-    _resolveSelfIntersections(paths) {
-        for (let i = 0; i < paths.length; i++) {
-            const p = paths[i];
-            if (!(p instanceof paper.Path) || !p.closed) continue;
+    // Convert any item (Path, CompoundPath, Group) to a single Path/CompoundPath
+    _itemToPath(item) {
+        if (item instanceof paper.Path || item instanceof paper.CompoundPath) {
+            return this._resolveIfSelfIntersecting(item);
+        }
+        if (item instanceof paper.Group) {
+            // Collect all Path/CompoundPath children recursively
+            const children = [];
+            const collect = (group) => {
+                group.children.forEach(c => {
+                    if (c instanceof paper.Path || c instanceof paper.CompoundPath) {
+                        children.push(c);
+                    } else if (c instanceof paper.Group) {
+                        collect(c);
+                    }
+                });
+            };
+            collect(item);
+            if (children.length === 0) return null;
+            if (children.length === 1) {
+                const single = children[0].clone();
+                single.data = { ...item.data, isUserItem: true };
+                single.insertAbove(item);
+                item.remove();
+                return this._resolveIfSelfIntersecting(single);
+            }
+            // Unite all children into one path
+            let merged = children[0].clone();
+            for (let i = 1; i < children.length; i++) {
+                const next = merged.unite(children[i]);
+                merged.remove();
+                merged = next;
+            }
+            merged.data = { ...item.data, isUserItem: true };
+            merged.strokeColor = item.strokeColor || children[0].strokeColor;
+            merged.strokeWidth = 0.5;
+            merged.fillColor = null;
+            merged.insertAbove(item);
+            // Update selection reference
+            const selIdx = MB.App.selectedItems.indexOf(item);
+            if (selIdx >= 0) MB.App.selectedItems[selIdx] = merged;
+            item.remove();
+            return merged;
+        }
+        return null;
+    },
+
+    // Resolve self-intersecting closed path into clean outline
+    _resolveIfSelfIntersecting(p) {
+        if (!(p instanceof paper.Path) || !p.closed) return p;
+        try {
             const ix = p.getIntersections();
-            if (ix.length === 0) continue;
-            // Unite path with itself to resolve crossings into clean outline
+            if (ix.length === 0) return p;
             const clone = p.clone();
             clone.visible = false;
             const resolved = p.unite(clone);
@@ -41,13 +93,15 @@ MB.BooleanOps = {
                 resolved.strokeWidth = p.strokeWidth;
                 resolved.fillColor = p.fillColor;
                 resolved.insertAbove(p);
-                // Update selection reference
                 const selIdx = MB.App.selectedItems.indexOf(p);
                 if (selIdx >= 0) MB.App.selectedItems[selIdx] = resolved;
                 p.remove();
-                paths[i] = resolved;
+                return resolved;
             }
+        } catch (e) {
+            // If resolution fails, use original path
         }
+        return p;
     },
 
     _executeOp(operation, name, base, others) {
