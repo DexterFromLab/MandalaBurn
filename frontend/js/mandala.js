@@ -170,6 +170,13 @@ MB.Mandala = {
         const allItems = [];
 
         for (const item of sourceItems) {
+            // Remove per-object symmetry before flattening (make permanent)
+            if (item.data._hiddenBySym) {
+                item.visible = true;
+                delete item.data._hiddenBySym;
+            }
+            if (item.data.symmetry) delete item.data.symmetry;
+
             allItems.push(item); // keep original
 
             // Rotated copies
@@ -245,12 +252,14 @@ MB.Mandala = {
         const wasHidden = !item.visible && item.data && item.data._hiddenBySym;
         if (wasHidden) item.visible = true;
 
-        // Rotated copies (i=0 is the original on the user layer, skip it)
-        for (let i = 1; i < this.segments; i++) {
+        // Rotated copies: start at i=0 when original is hidden (fill the gap),
+        // otherwise i=1 (original on user layer serves as i=0)
+        const startI = wasHidden ? 0 : 1;
+        for (let i = startI; i < this.segments; i++) {
             const copy = item.clone();
             copy.data = { isMandalaCopy: true, mandalaSource: item };
             copy.selected = false;
-            copy.rotate(angleStep * i, this.center);
+            if (i > 0) copy.rotate(angleStep * i, this.center);
             this._mirrorLayer.addChild(copy);
         }
 

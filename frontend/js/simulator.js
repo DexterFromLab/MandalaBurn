@@ -35,8 +35,14 @@ MB.Simulator = {
 
         const rapidSpeed = (MB.Machine.settings.maxSpeed || 6000) / 60; // mm/min → mm/s
 
+        // Force ephemeral layers to be up-to-date before compiling
+        if (MB.Symmetry) try { MB.Symmetry.rebuildAll(); } catch (e) {}
+        if (MB.Mandala && MB.Mandala.active) try { MB.Mandala.rebuildMirrors(); } catch (e) {}
+
         let pos = { x: 0, y: 0 };
         let _dbgOrig = 0, _dbgMandala = 0, _dbgSym = 0;
+
+        const hasMandala = !!(MB.Mandala && MB.Mandala.active && MB.Mandala._mirrorLayer);
 
         MB.Layers.layers.forEach(layer => {
             if (!layer.output || !layer.visible) return;
@@ -47,12 +53,11 @@ MB.Simulator = {
                 layer.paperLayer.children.forEach(item => {
                     if (!item.data || !item.data.isUserItem) return;
 
-                    const hasSym = item.data.symmetry && MB.Symmetry &&
-                        MB.Symmetry.hasSymmetry(item) && MB.Symmetry._symmetryLayer;
-                    const hasMandala = MB.Mandala && MB.Mandala.active && MB.Mandala._mirrorLayer;
+                    const isHidden = item.data._hiddenBySym &&
+                        MB.Symmetry && MB.Symmetry._symmetryLayer;
 
-                    if (hasSym && !hasMandala) {
-                        // Symmetry only (no mandala): compile symmetry copies instead of original
+                    if (isHidden && !hasMandala) {
+                        // Hidden by symmetry, no mandala: compile symmetry copies
                         MB.Symmetry._symmetryLayer.children.forEach(copy => {
                             if (copy.data && copy.data.symmetryOriginal === item) {
                                 this._compileItem(copy, layer, ls, pass, passes, rapidSpeed, pos);
@@ -66,13 +71,16 @@ MB.Simulator = {
                         return;
                     }
 
-                    // Compile original item (or hidden original — geometry is still valid)
-                    this._compileItem(item, layer, ls, pass, passes, rapidSpeed, pos);
-                    _dbgOrig++;
-                    if (this.commands.length > 0) {
-                        const last = this.commands[this.commands.length - 1];
-                        pos = { x: last.to.x, y: last.to.y };
+                    if (!isHidden) {
+                        // Visible item: compile directly
+                        this._compileItem(item, layer, ls, pass, passes, rapidSpeed, pos);
+                        _dbgOrig++;
+                        if (this.commands.length > 0) {
+                            const last = this.commands[this.commands.length - 1];
+                            pos = { x: last.to.x, y: last.to.y };
+                        }
                     }
+                    // Note: if hidden + mandala active, skip original — mandala copy at i=0 covers it
 
                     // Compile mandala copies of this item
                     if (hasMandala) {
