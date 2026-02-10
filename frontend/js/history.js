@@ -129,6 +129,15 @@ MB.History = {
                 }
             });
 
+            // Rebuild _originalImage for restored Raster items
+            paperLayer.children.forEach(child => {
+                if (child.data && child.data.isRasterImage && child.data.imageDataUrl) {
+                    const origImg = new Image();
+                    origImg.src = child.data.imageDataUrl;
+                    child.data._originalImage = origImg;
+                }
+            });
+
             // Now safe to lock
             paperLayer.locked = layer.locked;
         });

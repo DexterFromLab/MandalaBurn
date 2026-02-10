@@ -653,6 +653,19 @@
                                 <input type="number" id="param-raster-overscan" value="2.5" min="0" max="20" step="0.5" class="lt-input" style="width:55px">
                                 <span class="unit-label">mm</span>
                             </div>
+                            <div style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px">
+                                <div style="font-size:10px;color:var(--accent);text-transform:uppercase;margin-bottom:4px">Trace to Vectors</div>
+                                <div style="margin-bottom:4px">
+                                    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:1px">
+                                        <span>Simplify tolerance</span><span id="param-raster-tolerance-val">2.5</span>
+                                    </div>
+                                    <input type="range" id="param-raster-tolerance" min="0.5" max="10" step="0.5" value="2.5" style="width:100%">
+                                </div>
+                                <div class="prop-row" style="gap:4px">
+                                    <button class="to-btn" id="param-raster-trace" style="flex:1;background:var(--accent);color:white">Trace to Vectors</button>
+                                    <button class="to-btn" id="param-raster-trace-remove" style="flex:1">Trace &amp; Remove Image</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
