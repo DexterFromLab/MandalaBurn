@@ -48,7 +48,8 @@ MB.ProjectIO = {
                 locked: layer.locked,
                 laserSettings: { ...layer.laserSettings },
                 objects: this.serializeLayerObjects(layer)
-            }))
+            })),
+            attachedRulers: MB.AttachedRulers ? MB.AttachedRulers.serialize() : []
         };
         return project;
     },
@@ -184,6 +185,13 @@ MB.ProjectIO = {
         MB.Layers.setActiveLayer(0);
         MB.Layers.renderLayerList();
         MB.Canvas.zoomFit();
+
+        // Restore attached rulers
+        if (MB.AttachedRulers) {
+            MB.AttachedRulers.removeAll();
+            if (data.attachedRulers) MB.AttachedRulers.restore(data.attachedRulers);
+        }
+
         document.getElementById('status-info').textContent = 'Project loaded';
     },
 
@@ -191,6 +199,7 @@ MB.ProjectIO = {
     newProject() {
         MB.App.clearSelection();
         MB.History.clear();
+        if (MB.AttachedRulers) MB.AttachedRulers.removeAll();
         MB.Layers.layers.forEach(l => l.paperLayer.remove());
         MB.Layers.layers = [];
         MB.Layers._nextId = 1;
@@ -217,12 +226,15 @@ MB.ProjectIO = {
         if (mandalaGuides) mandalaGuides.visible = false;
         const simLayer = MB.Simulator && MB.Simulator.simLayer;
         if (simLayer) simLayer.visible = false;
+        const attachedRulersLayer = MB.AttachedRulers && MB.AttachedRulers._rulersLayer;
+        if (attachedRulersLayer) attachedRulersLayer.visible = false;
         // Keep symmetry layer visible — contains correct visual for symmetry items
         // Keep mandala mirror layer visible — contains rotated copies
 
         const svg = paper.project.exportSVG({ asString: true });
         bgLayer.visible = true;
         if (mandalaGuides && MB.Mandala && MB.Mandala.active) mandalaGuides.visible = true;
+        if (attachedRulersLayer) attachedRulersLayer.visible = true;
 
         const blob = new Blob([svg], { type: 'image/svg+xml' });
         const url = URL.createObjectURL(blob);

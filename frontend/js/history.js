@@ -37,17 +37,21 @@ MB.History = {
 
     undo() {
         if (this.undoStack.length === 0) return;
+        if (MB.AttachedRulers) MB.AttachedRulers.saveAnchorsBeforeRestore();
         this.redoStack.push(this._captureState());
         const state = this.undoStack.pop();
         this._restoreState(state);
+        if (MB.AttachedRulers) MB.AttachedRulers.reconnectAfterRestore();
         this._updateUI();
     },
 
     redo() {
         if (this.redoStack.length === 0) return;
+        if (MB.AttachedRulers) MB.AttachedRulers.saveAnchorsBeforeRestore();
         this.undoStack.push(this._captureState());
         const state = this.redoStack.pop();
         this._restoreState(state);
+        if (MB.AttachedRulers) MB.AttachedRulers.reconnectAfterRestore();
         this._updateUI();
     },
 

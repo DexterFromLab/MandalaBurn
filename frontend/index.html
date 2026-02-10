@@ -243,6 +243,16 @@
                 <div class="prop-row" style="margin-top:4px">
                     <button class="to-btn" id="ruler-clear">Clear</button>
                 </div>
+                <div style="margin-top:6px;border-top:1px solid var(--border);padding-top:6px">
+                    <div style="font-size:10px;color:var(--accent);text-transform:uppercase;margin-bottom:4px">Attached Rulers</div>
+                    <div class="prop-row">
+                        <label><input type="checkbox" id="ruler-attach-mode"> Attach to points</label>
+                    </div>
+                    <div class="prop-row">
+                        <span id="ruler-attached-count" style="font-size:10px;color:var(--text-muted)">0 rulers</span>
+                        <button class="to-btn" id="ruler-clear-attached" style="margin-left:auto">Clear All</button>
+                    </div>
+                </div>
             </div>
             <!-- Node-edit tool options -->
             <div class="tool-opts" data-tool="node-edit">
@@ -1192,6 +1202,7 @@
     <script src="/js/tools/circle.js"></script>
     <script src="/js/tools/polygon.js"></script>
     <script src="/js/tools/node-edit.js"></script>
+    <script src="/js/rulers-attached.js"></script>
     <script src="/js/tools/ruler.js"></script>
     <script src="/js/rulers.js"></script>
     <script src="/js/objects-list.js"></script>
