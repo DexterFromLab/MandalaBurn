@@ -57,10 +57,24 @@ MB.ProjectIO = {
         const objects = [];
         layer.paperLayer.children.forEach(child => {
             if (child.data && child.data.isUserItem) {
-                objects.push({
-                    type: 'path',
-                    json: child.exportJSON()
-                });
+                if (child instanceof paper.Raster && child.data.isRasterImage) {
+                    objects.push({
+                        type: 'raster',
+                        imageDataUrl: child.data.imageDataUrl,
+                        imageName: child.data.imageName,
+                        imageSettings: { ...child.data.imageSettings },
+                        position: { x: child.position.x, y: child.position.y },
+                        bounds: { x: child.bounds.x, y: child.bounds.y,
+                                  width: child.bounds.width, height: child.bounds.height },
+                        rotation: child.rotation || 0,
+                        opacity: child.opacity
+                    });
+                } else {
+                    objects.push({
+                        type: 'path',
+                        json: child.exportJSON()
+                    });
+                }
             }
         });
         return objects;
@@ -123,7 +137,39 @@ MB.ProjectIO = {
                 if (layerData.objects) {
                     layer.paperLayer.activate();
                     layerData.objects.forEach(obj => {
-                        if (obj.json) {
+                        if (obj.type === 'raster' && obj.imageDataUrl) {
+                            const raster = new paper.Raster(obj.imageDataUrl);
+                            raster.onLoad = function() {
+                                // Restore size via bounds
+                                if (obj.bounds && obj.bounds.width > 0 && obj.bounds.height > 0) {
+                                    const sx = obj.bounds.width / raster.bounds.width;
+                                    const sy = obj.bounds.height / raster.bounds.height;
+                                    raster.scale(sx, sy);
+                                }
+                                if (obj.position) {
+                                    raster.position = new paper.Point(obj.position.x, obj.position.y);
+                                }
+                                if (obj.rotation) raster.rotation = obj.rotation;
+                                raster.opacity = obj.opacity !== undefined ? obj.opacity : 0.85;
+                                // Store original image for processing
+                                const origImg = new Image();
+                                origImg.src = obj.imageDataUrl;
+                                raster.data = {
+                                    isUserItem: true,
+                                    isRasterImage: true,
+                                    imageName: obj.imageName || 'image',
+                                    imageDataUrl: obj.imageDataUrl,
+                                    _originalImage: origImg,
+                                    imageSettings: obj.imageSettings || {
+                                        dpi: 254, dithering: 'threshold', threshold: 128,
+                                        brightness: 0, contrast: 0, invert: false,
+                                        scanDirection: 'horizontal', bidirectional: true, overscan: 2.5
+                                    }
+                                };
+                                layer.paperLayer.addChild(raster);
+                                paper.view.update();
+                            };
+                        } else if (obj.json) {
                             const item = new paper.Item();
                             item.importJSON(obj.json);
                             layer.paperLayer.addChild(item);

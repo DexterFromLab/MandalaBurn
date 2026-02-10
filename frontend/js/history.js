@@ -116,11 +116,16 @@ MB.History = {
             paperLayer.activate();
             layerData.objects.forEach(jsonStr => {
                 const parsed = JSON.parse(jsonStr);
-                const typeName = parsed[0]; // "Path", "CompoundPath", etc.
-                const Ctor = paper[typeName];
-                if (Ctor) {
-                    const item = new Ctor();    // adds to active layer
-                    item.importJSON(jsonStr);    // same type → updates in place
+                const typeName = parsed[0]; // "Path", "CompoundPath", "Raster", etc.
+                if (typeName === 'Raster') {
+                    // Raster needs direct importJSON (constructor doesn't work the same)
+                    paperLayer.importJSON(jsonStr);
+                } else {
+                    const Ctor = paper[typeName];
+                    if (Ctor) {
+                        const item = new Ctor();    // adds to active layer
+                        item.importJSON(jsonStr);    // same type → updates in place
+                    }
                 }
             });
 

@@ -191,6 +191,12 @@
                 hox: seg.handleOut.x, hoy: seg.handleOut.y
             }));
         }
+        if (item instanceof paper.Raster) {
+            return { type: 'raster',
+                     px: item.position.x, py: item.position.y,
+                     sx: item.scaling.x, sy: item.scaling.y,
+                     rotation: item.rotation };
+        }
         if (item instanceof paper.CompoundPath) {
             return { type: 'compound', children: item.children.map(c => savePathSegs(c)) };
         }
@@ -214,7 +220,11 @@
             }
         }
         if (!saved) return;
-        if (saved.type === 'path' && item instanceof paper.Path) {
+        if (saved.type === 'raster' && item instanceof paper.Raster) {
+            item.position.set(saved.px, saved.py);
+            item.scaling = new paper.Point(saved.sx, saved.sy);
+            item.rotation = saved.rotation;
+        } else if (saved.type === 'path' && item instanceof paper.Path) {
             restorePathSegs(item, saved.segments);
         } else if (saved.type === 'compound' && item instanceof paper.CompoundPath) {
             item.children.forEach((child, i) => {
@@ -229,6 +239,11 @@
 
     // Manual point-by-point rotation — pure trigonometry, bypasses Paper.js transforms
     function manualRotate(item, angleDeg, center) {
+        // Raster: use Paper.js native rotate (no segments to manipulate)
+        if (item instanceof paper.Raster) {
+            item.rotate(angleDeg, center);
+            return;
+        }
         const rad = angleDeg * Math.PI / 180;
         const cos = Math.cos(rad), sin = Math.sin(rad);
         function rotateSegs(path) {
@@ -256,6 +271,11 @@
 
     // Manual point-by-point scaling — direct coordinate math
     function manualScale(item, sx, sy, center) {
+        // Raster: use Paper.js native scale (no segments to manipulate)
+        if (item instanceof paper.Raster) {
+            item.scale(sx, sy, center);
+            return;
+        }
         function scaleSegs(path) {
             for (let i = 0; i < path.segments.length; i++) {
                 const seg = path.segments[i];
@@ -278,7 +298,12 @@
     function computeCentroid(items) {
         let sumX = 0, sumY = 0, count = 0;
         function addPts(item) {
-            if (item instanceof paper.CompoundPath) {
+            if (item instanceof paper.Raster) {
+                // Use bounds center for rasters
+                sumX += item.bounds.center.x;
+                sumY += item.bounds.center.y;
+                count++;
+            } else if (item instanceof paper.CompoundPath) {
                 item.children.forEach(c => addPts(c));
             } else if (item instanceof paper.Group) {
                 item.children.forEach(c => addPts(c));

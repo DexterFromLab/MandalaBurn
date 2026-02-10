@@ -14,6 +14,7 @@ MB.GCode = {
         let lastSpeed = -1;
         let lastPower = -1;
         let lastAir = false;
+        let laserMode = ''; // 'M3' (constant) or 'M4' (dynamic/raster)
 
         for (const cmd of commands) {
             if (cmd.type === 'rapid') {
@@ -39,10 +40,18 @@ MB.GCode = {
                     lastAir = false;
                 }
 
+                // Laser mode: M4 for raster (dynamic power), M3 for vector (constant)
+                const needMode = cmd.mode === 'image' ? 'M4' : 'M3';
+                if (needMode !== laserMode) {
+                    laserMode = needMode;
+                    // Force power re-emit after mode switch
+                    lastPower = -1;
+                }
+
                 // Power
                 const sVal = Math.round(cmd.power * maxPower / 100);
                 if (sVal !== lastPower) {
-                    lines.push('M3 S' + sVal);
+                    lines.push(laserMode + ' S' + sVal);
                     lastPower = sVal;
                 }
 

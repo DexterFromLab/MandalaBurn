@@ -34,6 +34,7 @@
             <button data-action="save-project">Save Project</button>
             <div class="menu-separator"></div>
             <button data-action="import-svg">Import SVG...</button>
+            <button data-action="import-image">Import Image...</button>
             <button data-action="export-svg">Export SVG</button>
             <button data-action="export-gcode">Export G-code</button>
         </div>
@@ -596,6 +597,63 @@
                             <div class="prop-row"><label>d2</label><input type="number" id="param-gu-d2" step="0.5" min="0.1" style="width:55px"></div>
                             <div class="prop-row"><label>Lines</label><input type="number" id="param-gu-lines" step="10" min="20" max="500" style="width:55px"></div>
                         </div>
+
+                        <div id="param-raster" class="param-group hidden">
+                            <div class="prop-row">
+                                <label>DPI</label>
+                                <select id="param-raster-dpi" style="flex:1" class="lt-select">
+                                    <option value="127">127 (5 lpmm)</option>
+                                    <option value="254" selected>254 (10 lpmm)</option>
+                                    <option value="318">318 (12.5 lpmm)</option>
+                                    <option value="508">508 (20 lpmm)</option>
+                                </select>
+                            </div>
+                            <div class="prop-row">
+                                <label>Dither</label>
+                                <select id="param-raster-dither" style="flex:1" class="lt-select">
+                                    <option value="threshold">Threshold</option>
+                                    <option value="ordered">Ordered (Bayer)</option>
+                                    <option value="floyd-steinberg">Floyd-Steinberg</option>
+                                    <option value="grayscale">Grayscale (var. power)</option>
+                                </select>
+                            </div>
+                            <div id="param-raster-threshold-row" style="margin-bottom:4px">
+                                <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:1px">
+                                    <span>Threshold</span><span id="param-raster-threshold-val">128</span>
+                                </div>
+                                <input type="range" id="param-raster-threshold" min="1" max="255" value="128" style="width:100%">
+                            </div>
+                            <div style="margin-bottom:4px">
+                                <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:1px">
+                                    <span>Brightness</span><span id="param-raster-brightness-val">0</span>
+                                </div>
+                                <input type="range" id="param-raster-brightness" min="-100" max="100" value="0" style="width:100%">
+                            </div>
+                            <div style="margin-bottom:4px">
+                                <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:1px">
+                                    <span>Contrast</span><span id="param-raster-contrast-val">0</span>
+                                </div>
+                                <input type="range" id="param-raster-contrast" min="-100" max="100" value="0" style="width:100%">
+                            </div>
+                            <div class="prop-row">
+                                <label><input type="checkbox" id="param-raster-invert"> Invert</label>
+                            </div>
+                            <div class="prop-row">
+                                <label>Scan</label>
+                                <select id="param-raster-scan-dir" style="flex:1" class="lt-select">
+                                    <option value="horizontal">Horizontal</option>
+                                    <option value="vertical">Vertical</option>
+                                </select>
+                            </div>
+                            <div class="prop-row">
+                                <label><input type="checkbox" id="param-raster-bidir" checked> Bidirectional</label>
+                            </div>
+                            <div class="prop-row">
+                                <label>Overscan</label>
+                                <input type="number" id="param-raster-overscan" value="2.5" min="0" max="20" step="0.5" class="lt-input" style="width:55px">
+                                <span class="unit-label">mm</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1101,6 +1159,7 @@
     <!-- Hidden file inputs -->
     <input type="file" id="file-open-project" accept=".mandala,.json" style="display:none">
     <input type="file" id="file-import-svg" accept=".svg" style="display:none">
+    <input type="file" id="file-import-image" accept="image/png,image/jpeg,image/bmp,image/gif,image/webp,image/tiff" style="display:none">
 
     <!-- Libraries -->
     <script src="/lib/opentype.min.js"></script>
@@ -1128,6 +1187,7 @@
     <script src="/js/project-io.js"></script>
     <script src="/js/font-manager.js"></script>
     <script src="/js/tools/text.js"></script>
+    <script src="/js/image-layer.js"></script>
     <script src="/js/simulator.js"></script>
     <script src="/js/mandala.js"></script>
     <script src="/js/symmetry.js"></script>

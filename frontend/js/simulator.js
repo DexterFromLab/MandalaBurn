@@ -133,6 +133,15 @@ MB.Simulator = {
             layerName: layer.name, mode: ls.mode, pass: pass, totalPasses: totalPasses
         };
 
+        // Raster image: delegate to ImageLayer for scan-line compilation
+        if (item instanceof paper.Raster && item.data && item.data.isRasterImage) {
+            const result = MB.ImageLayer.compileRaster(item, layer, ls, pass, totalPasses, rapidSpeed, pos);
+            this.commands.push(...result.commands);
+            pos.x = result.pos.x;
+            pos.y = result.pos.y;
+            return;
+        }
+
         if (item instanceof paper.Group) {
             item.children.forEach(child => {
                 if (child.data && child.data.isUserItem !== false) {
@@ -361,7 +370,27 @@ MB.Simulator = {
 
     _drawTrailSegment(cmd, zoom) {
         if (cmd.type === 'cut') {
-            // Batch consecutive cuts into a single polyline path for performance
+            // Raster image mode: draw burn lines with intensity-based opacity
+            if (cmd.mode === 'image') {
+                this._currentTrailPath = null;
+                this._currentTrailColor = null;
+                if (cmd.power <= 0) return; // skip white pixels
+                const intensity = Math.min(1, cmd.power / 100);
+                // Line spacing from DPI (approximate from command spacing)
+                const dy = Math.abs(cmd.to.y - cmd.from.y);
+                const dx = Math.abs(cmd.to.x - cmd.from.x);
+                const lineWidth = Math.max(0.3 / zoom, dy > 0.01 ? dy : 0.1);
+                new paper.Path.Line({
+                    from: [cmd.from.x, cmd.from.y],
+                    to: [cmd.to.x, cmd.to.y],
+                    strokeColor: new paper.Color(0, 0, 0, intensity),
+                    strokeWidth: lineWidth,
+                    parent: this.simLayer
+                });
+                return;
+            }
+
+            // Batch consecutive vector cuts into a single polyline path for performance
             if (this._currentTrailPath && this._currentTrailColor === cmd.color) {
                 this._currentTrailPath.add(new paper.Point(cmd.to.x, cmd.to.y));
             } else {

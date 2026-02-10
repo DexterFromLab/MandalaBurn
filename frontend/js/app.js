@@ -35,6 +35,7 @@ MB.App = {
         MB.Symmetry.init();
         MB.Generators.init();
         MB.Simulator.init();
+        MB.ImageLayer.init();
         MB.ArrayPattern.init();
         MB.PathOffset.init();
         MB.JobSender.init();
@@ -355,6 +356,7 @@ MB.App = {
             case 'open-project': document.getElementById('file-open-project').click(); break;
             case 'save-project': MB.ProjectIO.saveProject(); break;
             case 'import-svg': document.getElementById('file-import-svg').click(); break;
+            case 'import-image': document.getElementById('file-import-image').click(); break;
             case 'export-svg': MB.ProjectIO.exportSVG(); break;
             case 'zoom-in': MB.Canvas.zoomIn(); break;
             case 'zoom-out': MB.Canvas.zoomOut(); break;

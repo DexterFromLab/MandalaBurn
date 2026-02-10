@@ -300,8 +300,26 @@ MB.Properties = {
                 }
             }
 
-            // Parametric properties
-            this._updateParamPanel(item, paramProps);
+            // Raster image or parametric properties
+            if (item.data && item.data.isRasterImage) {
+                if (paramProps) {
+                    paramProps.classList.remove('hidden');
+                    paramProps.querySelectorAll('.param-group').forEach(g => g.classList.add('hidden'));
+                    const typeLabel = document.getElementById('param-type-label');
+                    if (typeLabel) typeLabel.textContent = 'Image';
+                    const flattenBtn = document.getElementById('param-flatten-btn');
+                    if (flattenBtn) flattenBtn.style.display = 'none';
+                    const rasterPanel = document.getElementById('param-raster');
+                    if (rasterPanel) rasterPanel.classList.remove('hidden');
+                    MB.ImageLayer.populateRasterPanel(item.data.imageSettings);
+                }
+                const objPanel = document.getElementById('object-properties');
+                if (objPanel) objPanel.classList.remove('collapsed');
+            } else {
+                this._updateParamPanel(item, paramProps);
+                const flattenBtn = document.getElementById('param-flatten-btn');
+                if (flattenBtn) flattenBtn.style.display = '';
+            }
 
             // Auto-expand Object panel when parametric item is selected
             if (MB.Parametric && MB.Parametric.isParametric(item)) {

@@ -518,7 +518,7 @@ MB.Layers = {
 
     updateLayerItemColors(layer) {
         layer.paperLayer.children.forEach(child => {
-            if (child.data && child.data.isUserItem) {
+            if (child.data && child.data.isUserItem && !(child instanceof paper.Raster)) {
                 child.strokeColor = layer.color;
             }
         });

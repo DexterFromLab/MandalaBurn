@@ -179,6 +179,7 @@ MB.ObjectsList = {
                 spirograph: 'Spiro', rose: 'Rose', lissajous: 'Lissaj.', harmonograph: 'Harmon.', guilloche: 'Guillo.' };
             return names[item.data.shapeType] || item.data.shapeType;
         }
+        if (item instanceof paper.Raster) return 'Image';
         if (item instanceof paper.CompoundPath) return 'Compound';
         if (item instanceof paper.Path) {
             if (item.closed) {
@@ -201,6 +202,7 @@ MB.ObjectsList = {
                 spirograph: '\u2609', rose: '\u2740', lissajous: '\u221E', harmonograph: '\u223F', guilloche: '\u2736' };
             return icons[item.data.shapeType] || '\u25A1';
         }
+        if (item instanceof paper.Raster) return '\u25A3'; // ▣
         if (item instanceof paper.CompoundPath) return '\u29C9'; // ⧉
         if (item instanceof paper.Path) {
             if (item.closed) {

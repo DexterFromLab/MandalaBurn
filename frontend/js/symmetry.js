@@ -96,7 +96,11 @@ MB.Symmetry = {
     _itemCentroid(item) {
         let sumX = 0, sumY = 0, count = 0;
         const add = (it) => {
-            if (it instanceof paper.CompoundPath) {
+            if (it instanceof paper.Raster) {
+                sumX += it.bounds.center.x;
+                sumY += it.bounds.center.y;
+                count++;
+            } else if (it instanceof paper.CompoundPath) {
                 it.children.forEach(c => add(c));
             } else if (it instanceof paper.Group) {
                 it.children.forEach(c => add(c));
