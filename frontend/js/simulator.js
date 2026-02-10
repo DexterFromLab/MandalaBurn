@@ -12,6 +12,8 @@ MB.Simulator = {
     _rafId: null,
     _trailIdx: 0,       // index of last drawn trail command
     _currentPos: { x: 0, y: 0 },
+    _currentTrailPath: null,   // current open polyline for batching cut segments
+    _currentTrailColor: null,
 
     init() {
         // Create overlay layer (above all user layers)
@@ -167,8 +169,8 @@ MB.Simulator = {
         const len = path.length;
         if (len < 0.01) return;
 
-        // Sample step: ~0.5mm but at least path.length/500 for very short paths
-        const step = Math.max(0.5, len / 500);
+        // Sample step: 0.5mm for smooth curves (matches real laser resolution)
+        const step = 0.5;
 
         // First point — rapid move to start
         const startPt = path.getPointAt(0);
@@ -359,16 +361,24 @@ MB.Simulator = {
 
     _drawTrailSegment(cmd, zoom) {
         if (cmd.type === 'cut') {
-            new paper.Path.Line({
-                from: [cmd.from.x, cmd.from.y],
-                to: [cmd.to.x, cmd.to.y],
-                strokeColor: cmd.color,
-                strokeWidth: 1.5 / zoom,
-                parent: this.simLayer
-            });
+            // Batch consecutive cuts into a single polyline path for performance
+            if (this._currentTrailPath && this._currentTrailColor === cmd.color) {
+                this._currentTrailPath.add(new paper.Point(cmd.to.x, cmd.to.y));
+            } else {
+                this._currentTrailPath = new paper.Path({
+                    segments: [[cmd.from.x, cmd.from.y], [cmd.to.x, cmd.to.y]],
+                    strokeColor: cmd.color,
+                    strokeWidth: 1.5 / zoom,
+                    parent: this.simLayer
+                });
+                this._currentTrailColor = cmd.color;
+            }
         } else {
+            // Rapid move breaks the polyline chain
+            this._currentTrailPath = null;
+            this._currentTrailColor = null;
             // Rapid move — faint dashed line
-            const line = new paper.Path.Line({
+            new paper.Path.Line({
                 from: [cmd.from.x, cmd.from.y],
                 to: [cmd.to.x, cmd.to.y],
                 strokeColor: '#888',
@@ -398,6 +408,8 @@ MB.Simulator = {
         if (this.simLayer) this.simLayer.removeChildren();
         this.marker = null;
         this._partialTrail = null;
+        this._currentTrailPath = null;
+        this._currentTrailColor = null;
     },
 
     // ---- UI ----
